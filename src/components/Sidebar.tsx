@@ -1,13 +1,14 @@
-import { 
-  Terminal, 
-  PlusCircle, 
-  LayoutDashboard, 
-  ReceiptText, 
-  Utensils, 
-  Package, 
-  Users, 
-  Settings, 
-  LogOut 
+import {
+  ChefHat,
+  PlusCircle,
+  LayoutDashboard,
+  ReceiptText,
+  Utensils,
+  Package,
+  Truck,
+  BarChart2,
+  Settings,
+  LogOut,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -15,82 +16,95 @@ interface SidebarProps {
   setView: (view: string) => void;
 }
 
-export default function Sidebar({ currentView, setView }: SidebarProps) {
-  const navItems = [
-    { id: 'pos', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'orders', label: 'Pedidos', icon: ReceiptText },
-    { id: 'kitchen', label: 'Cocina', icon: Utensils },
-    { id: 'inventory', label: 'Inventario', icon: Package },
-    { id: 'reports', label: 'Reportes', icon: Users }, // Using Users for Customers/Reports mix based on mockups
-  ];
+const navItems = [
+  { id: 'pos',       label: 'Nuevo Pedido', icon: LayoutDashboard },
+  { id: 'orders',    label: 'Pedidos',      icon: ReceiptText },
+  { id: 'kitchen',   label: 'Cocina',       icon: Utensils },
+  { id: 'inventory', label: 'Inventario',   icon: Package },
+  { id: 'suppliers', label: 'Proveedores',  icon: Truck },
+  { id: 'reports',   label: 'Informes',     icon: BarChart2 },
+];
 
+export default function Sidebar({ currentView, setView }: SidebarProps) {
   return (
-    <nav className="bg-surface-container-highest border-r border-outline-variant h-screen w-64 fixed left-0 top-0 hidden md:flex flex-col p-6 z-40">
-      {/* Brand Header */}
-      <div className="mb-8 flex flex-col gap-1">
-        <div className="text-3xl font-black text-primary leading-none tracking-tighter uppercase flex items-center gap-2">
-          UDO-FAT
+    <nav
+      style={{ background: 'linear-gradient(180deg, #1a110d 0%, #211510 100%)' }}
+      className="h-screen w-64 fixed left-0 top-0 hidden md:flex flex-col p-5 z-40 border-r border-white/5"
+    >
+      {/* ── Logo ─────────────────────────────────────── */}
+      <div className="mb-7 flex items-center gap-3 px-1">
+        <div
+          style={{ background: 'linear-gradient(135deg, #e8601a, #c44d0e)' }}
+          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg"
+        >
+          <ChefHat size={21} color="#fff" />
         </div>
-        <div className="text-xs font-bold text-on-surface-variant uppercase tracking-widest mt-3">
-          Terminal Admin
+        <div>
+          <div className="text-[15px] font-black text-white leading-tight tracking-tight uppercase">
+            Restaurante Equis
+          </div>
+          <div className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mt-0.5">
+            Sistema de gestión
+          </div>
         </div>
       </div>
 
-      {/* CTA Action */}
-      <button 
+      {/* ── Botón CTA ────────────────────────────────── */}
+      <button
         onClick={() => setView('pos')}
-        className="bg-secondary-container text-on-secondary-container text-sm font-bold py-3 px-4 rounded flex items-center justify-center gap-2 mb-8 border-2 border-secondary-container hover:bg-surface-container-highest hover:text-secondary-container transition-all h-12 uppercase tracking-wide"
+        style={{ background: 'linear-gradient(135deg, #e8601a, #c44d0e)' }}
+        className="text-white text-sm font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 mb-6 hover:opacity-90 active:scale-95 transition-all h-12 uppercase tracking-wide shadow-lg shadow-orange-900/30"
       >
-        <PlusCircle size={20} />
+        <PlusCircle size={18} />
         Nuevo Pedido
       </button>
 
-      {/* Navigation Links */}
-      <div className="flex flex-col gap-2 flex-1">
-        {navItems.map((item) => {
-          const isActive = currentView === item.id || (currentView === 'reports' && item.id === 'reports');
-          const Icon = item.icon;
-          
+      {/* ── Sección label ────────────────────────────── */}
+      <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest px-2 mb-1.5">
+        Menú
+      </div>
+
+      {/* ── Navegación ───────────────────────────────── */}
+      <div className="flex flex-col gap-0.5 flex-1">
+        {navItems.map(({ id, label, icon: Icon }) => {
+          const isActive = currentView === id;
           return (
             <button
-              key={item.id}
-              onClick={() => setView(item.id)}
-              className={`flex items-center gap-3 p-3 rounded-lg text-sm font-bold transition-colors active:translate-y-0.5 duration-100 ${
-                isActive 
-                  ? 'bg-secondary-container text-on-secondary-container' 
-                  : 'text-on-surface-variant hover:bg-surface-variant'
+              key={id}
+              onClick={() => setView(id)}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
+                isActive
+                  ? 'bg-white/10 text-white'
+                  : 'text-white/50 hover:bg-white/5 hover:text-white/80'
               }`}
             >
-              <Icon size={20} />
-              <span>{item.label}</span>
+              <Icon
+                size={18}
+                color={isActive ? '#e8601a' : 'currentColor'}
+                className="shrink-0"
+              />
+              <span>{label}</span>
+              {isActive && (
+                <div
+                  className="ml-auto w-1.5 h-4 rounded-full"
+                  style={{ background: '#e8601a' }}
+                />
+              )}
             </button>
           );
         })}
       </div>
 
-      {/* Footer Actions */}
-      <div className="flex flex-col gap-2 mt-auto pt-6 border-t border-outline-variant">
-        <button className="flex items-center gap-3 p-3 rounded-lg text-sm font-bold text-on-surface-variant hover:bg-surface-variant transition-colors active:translate-y-0.5 duration-100">
-          <Settings size={20} />
+      {/* ── Footer ───────────────────────────────────── */}
+      <div className="flex flex-col gap-0.5 mt-auto pt-4 border-t border-white/10">
+        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white/40 hover:bg-white/5 hover:text-white/70 transition-all duration-150">
+          <Settings size={17} className="shrink-0" />
           <span>Configuración</span>
         </button>
-        <button className="flex items-center gap-3 p-3 rounded-lg text-sm font-bold text-on-surface-variant hover:bg-surface-variant transition-colors active:translate-y-0.5 duration-100">
-          <LogOut size={20} />
+        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white/40 hover:bg-white/5 hover:text-red-400 transition-all duration-150">
+          <LogOut size={17} className="shrink-0" />
           <span>Cerrar Sesión</span>
         </button>
-
-        {/* Profile Avatar */}
-        <div className="mt-3 flex items-center gap-3 p-3 bg-surface-container rounded border border-outline-variant">
-          <img 
-            src="https://lh3.googleusercontent.com/aida-public/AB6AXuD2kTrv46yEmGDCWXt7IYt4Zq0WTr9lNSNb52nl64RTk54eapxdmkVBghkBhBfpW0AjVG4kMaX8Ut2jL3doyfeRqzoUCJpfjgvpOUFKMdLHyca_4DnnG-jbfChW0lIy2Le-_9efsERf0ZOwtbaOOFtLqWNoN8hwb4aTDvtHo3St2ahZ883G33XlT1atSxj8dmA9mOl29p0fC5QI-3TAb9URkoWw3m8J2E3lFk6DVnbfGtwTcn8TRWA" 
-            alt="Admin" 
-            className="w-8 h-8 rounded-full object-cover border border-outline"
-          />
-          <div className="flex flex-col">
-            <span className="text-xs font-bold text-on-surface">SYS_ADMIN_01</span>
-            <span className="text-[10px] text-on-surface-variant uppercase tracking-wider">En Línea</span>
-          </div>
-        </div>
       </div>
     </nav>
   );

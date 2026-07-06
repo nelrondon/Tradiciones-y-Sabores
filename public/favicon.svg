@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Fondo naranja -->
+  <rect width="32" height="32" rx="7" fill="#e8601a"/>
+  <!-- Chef hat simplificado -->
+  <path d="M10 22h12v2H10zM10 20c0-1 1-2 2-2h8c1 0 2 1 2 2H10z" fill="white"/>
+  <ellipse cx="16" cy="13" rx="5" ry="4.5" fill="white"/>
+  <ellipse cx="11" cy="14.5" rx="3" ry="3.5" fill="white"/>
+  <ellipse cx="21" cy="14.5" rx="3" ry="3.5" fill="white"/>
+</svg>

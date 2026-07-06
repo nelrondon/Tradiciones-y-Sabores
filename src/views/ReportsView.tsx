@@ -1,229 +1,302 @@
-import { ReceiptText, Filter, Download, TrendingUp, TrendingDown, Timer, MoreVertical, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import {
+  ReceiptText, Filter, Download, TrendingUp, TrendingDown,
+  Timer, MoreVertical, ChevronLeft, ChevronRight,
+  Loader2, AlertTriangle,
+} from 'lucide-react';
+import { api, type Orden, type ResumenReporte } from '../api';
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function formatSegundos(seg: number): string {
+  const m = Math.floor(seg / 60);
+  const s = seg % 60;
+  return `${m}m ${s.toString().padStart(2, '0')}s`;
+}
+
+function BadgeEstatus({ estatus }: { estatus: string }) {
+  const estilos: Record<string, string> = {
+    Recibido: 'bg-surface-dim text-on-surface-variant border border-outline-variant',
+    Preparando: 'bg-[#fbbf24] text-black',
+    Listo: 'bg-[#10b981] text-white',
+  };
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded ${estilos[estatus] ?? estilos['Recibido']}`}>
+      {estatus === 'Preparando' && <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse" />}
+      {estatus}
+    </span>
+  );
+}
+
+const ITEMS_POR_PAGINA = 10;
+
+// ── Vista Principal ───────────────────────────────────────────────────────────
 
 export default function ReportsView() {
+  const [resumen, setResumen] = useState<ResumenReporte | null>(null);
+  const [pedidos, setPedidos] = useState<Orden[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filtroEstado, setFiltroEstado] = useState('');
+  const [filtroPeriodo, setFiltroPeriodo] = useState('hoy');
+  const [pagina, setPagina] = useState(1);
+
+  const cargarDatos = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [resumenData, pedidosData] = await Promise.all([
+        api.getResumen(),
+        api.getPedidosReporte({ estado: filtroEstado || undefined, periodo: filtroPeriodo }),
+      ]);
+      setResumen(resumenData);
+      setPedidos(pedidosData);
+      setPagina(1);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error al cargar datos');
+    } finally {
+      setLoading(false);
+    }
+  }, [filtroEstado, filtroPeriodo]);
+
+  useEffect(() => { cargarDatos(); }, [cargarDatos]);
+
+  const totalPaginas = Math.max(1, Math.ceil(pedidos.length / ITEMS_POR_PAGINA));
+  const pedidosPagina = pedidos.slice((pagina - 1) * ITEMS_POR_PAGINA, pagina * ITEMS_POR_PAGINA);
+
+  const exportarCSV = () => {
+    const filas = [
+      ['ID Pedido', 'Hora', 'Cliente', 'Cédula', 'Teléfono', 'Tipo', 'Total', 'Estado'],
+      ...pedidos.map((p) => [
+        `#${p.id_pedido}`, p.hora_creacion, p.cliente_nombre,
+        p.cliente_cedula ?? '', p.cliente_telefono ?? '',
+        p.tipo, p.total.toFixed(2), p.Estatus_Orden,
+      ]),
+    ];
+    const csv = filas.map((f) => f.map((c) => `"${c}"`).join(',')).join('\n');
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = `pedidos_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  };
+
+  const KPICard = ({
+    label, value, pct, icon: Icon, color,
+  }: {
+    label: string;
+    value: string;
+    pct: number | null;
+    icon: typeof Timer;
+    color: string;
+  }) => (
+    <div className={`bg-surface rounded-xl border-2 ${color} p-5 flex flex-col gap-3 card-shadow`}>
+      <div className="flex justify-between items-start">
+        <span className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">{label}</span>
+        <Icon size={20} className="text-on-surface-variant opacity-60" />
+      </div>
+      <span className="font-mono text-4xl font-black text-primary leading-none">{value}</span>
+      {pct !== null && (
+        <div className={`flex items-center gap-1 text-xs font-bold ${pct >= 0 ? 'text-emerald-600' : 'text-error'}`}>
+          {pct >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
+          {pct >= 0 ? '+' : ''}{pct}% desde ayer
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div className="p-8 flex-1 flex flex-col gap-8 max-w-[1600px] mx-auto w-full">
-      {/* Page Header & Global Filters */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 pb-6 border-b border-outline-variant">
+    <div className="p-8 flex-1 flex flex-col gap-6 max-w-[1600px] mx-auto w-full">
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-5 pb-6 border-b border-outline-variant">
         <div>
           <h2 className="text-3xl font-bold text-primary tracking-tight">Gestión de Datos</h2>
-          <p className="text-base text-on-surface-variant mt-2">Vista completa de la tabla 'PEDIDO' y analíticas.</p>
+          <p className="text-base text-on-surface-variant mt-2">
+            Vista completa de la tabla PEDIDO y analíticas del sistema.
+          </p>
         </div>
         <div className="flex flex-wrap gap-3">
-          <div className="flex items-center gap-1 bg-surface-container border border-outline-variant p-1 rounded">
-            <button className="px-3 py-1.5 text-sm font-bold text-on-surface bg-surface shadow-sm rounded">Hoy</button>
-            <button className="px-3 py-1.5 text-sm font-bold text-on-surface-variant hover:bg-surface-variant rounded transition-colors">7D</button>
-            <button className="px-3 py-1.5 text-sm font-bold text-on-surface-variant hover:bg-surface-variant rounded transition-colors">30D</button>
+          {/* Período */}
+          <div className="flex items-center gap-1 bg-surface-container border border-outline-variant rounded-lg p-1">
+            {(['hoy', '7d', '30d'] as const).map((p) => (
+              <button
+                key={p}
+                onClick={() => setFiltroPeriodo(p)}
+                className={`px-3 py-1.5 text-xs font-bold rounded transition-colors ${
+                  filtroPeriodo === p ? 'bg-primary text-on-primary' : 'text-on-surface-variant hover:bg-surface-variant'
+                }`}
+              >
+                {p === 'hoy' ? 'Hoy' : p === '7d' ? '7 días' : '30 días'}
+              </button>
+            ))}
           </div>
-          <button className="h-10 px-4 flex items-center gap-2 bg-surface border border-outline-variant text-primary text-sm font-bold rounded hover:bg-surface-variant transition-colors">
-            <Filter size={18} />
-            Filtros
+          <button
+            onClick={() => {}}
+            className="flex items-center gap-2 border border-outline-variant px-4 py-2 rounded font-bold text-sm text-on-surface-variant hover:bg-surface-variant transition-colors"
+          >
+            <Filter size={16} /> Filtros
           </button>
-          <button className="h-10 px-4 flex items-center gap-2 bg-primary text-on-primary text-sm font-bold rounded hover:bg-primary-fixed-dim hover:text-primary transition-colors">
-            <Download size={18} />
-            Exportar CSV
+          <button
+            onClick={exportarCSV}
+            className="flex items-center gap-2 bg-primary text-on-primary font-bold px-4 py-2 rounded hover:opacity-90 transition-opacity"
+          >
+            <Download size={18} /> Exportar CSV
           </button>
         </div>
       </div>
 
-      {/* Analytics Summary Cards (Bento style) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* Card 1 */}
-        <div className="bg-surface p-6 border border-outline-variant rounded flex flex-col gap-6">
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-bold text-on-surface-variant uppercase tracking-wider">Total Pedidos</span>
-            <ReceiptText className="text-secondary" />
-          </div>
-          <div>
-            <span className="text-5xl font-black text-primary">1.248</span>
-          </div>
-          <div className="flex items-center gap-1 text-secondary text-xs font-bold">
-            <TrendingUp size={16} />
-            <span>+12.5% desde ayer</span>
-          </div>
+      {error && (
+        <div className="bg-error-container text-on-error-container p-4 rounded flex items-center gap-3 border border-error text-sm">
+          <AlertTriangle size={18} /> {error}
+          <button onClick={cargarDatos} className="ml-auto font-bold underline">Reintentar</button>
         </div>
+      )}
 
-        {/* Card 2 */}
-        <div className="bg-surface p-6 border border-outline-variant rounded flex flex-col gap-6">
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-bold text-on-surface-variant uppercase tracking-wider">Ingresos Brutos</span>
-            <span className="font-bold text-secondary border border-secondary rounded-full w-6 h-6 flex items-center justify-center text-xs">$</span>
-          </div>
-          <div>
-            <span className="text-5xl font-black text-primary">$18.450</span>
-          </div>
-          <div className="flex items-center gap-1 text-secondary text-xs font-bold">
-            <TrendingUp size={16} />
-            <span>+8.2% desde ayer</span>
-          </div>
-        </div>
-
-        {/* Card 3 */}
-        <div className="bg-surface-container-highest p-6 border border-outline-variant rounded flex flex-col gap-6 relative overflow-hidden">
-          <div className="absolute inset-0 opacity-10 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #000 25%, transparent 25%, transparent 75%, #000 75%, #000), repeating-linear-gradient(45deg, #000 25%, #fdf8f8 25%, #fdf8f8 75%, #000 75%, #000)', backgroundPosition: '0 0, 10px 10px', backgroundSize: '20px 20px' }}></div>
-          <div className="flex justify-between items-start relative z-10">
-            <span className="text-sm font-bold text-primary uppercase tracking-wider">Tiempo Prom. Prep.</span>
-            <Timer className="text-primary" />
-          </div>
-          <div className="relative z-10">
-            <span className="text-5xl font-black text-primary">4m 12s</span>
-          </div>
-          <div className="flex items-center gap-1 text-primary text-xs font-bold relative z-10">
-            <TrendingDown size={16} />
-            <span>-30s del objetivo</span>
-          </div>
-        </div>
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        {loading || !resumen ? (
+          [1, 2, 3].map((i) => (
+            <div key={i} className="bg-surface rounded-xl border border-outline-variant p-5 h-36 animate-pulse" />
+          ))
+        ) : (
+          <>
+            <KPICard
+              label="Total Pedidos"
+              value={resumen.total_pedidos.toLocaleString()}
+              pct={resumen.pct_cambio_pedidos}
+              icon={ReceiptText}
+              color="border-primary"
+            />
+            <KPICard
+              label="Ingresos Brutos"
+              value={`$${resumen.ingresos_brutos.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+              pct={resumen.pct_cambio_ingresos}
+              icon={TrendingUp}
+              color="border-secondary-container"
+            />
+            <KPICard
+              label="Tiempo Prom. Preparación"
+              value={formatSegundos(resumen.tiempo_promedio_seg)}
+              pct={null}
+              icon={Timer}
+              color="border-outline-variant"
+            />
+          </>
+        )}
       </div>
 
-      {/* Data Table Section */}
-      <div className="bg-surface border border-outline-variant rounded flex flex-col flex-1 min-h-[500px]">
-        {/* Table Toolbar */}
-        <div className="p-4 border-b border-outline-variant bg-surface-container-low flex justify-between items-center">
-          <h3 className="text-xl font-bold text-primary">Tabla: PEDIDO (Datos en Vivo)</h3>
-          <div className="flex gap-4">
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
-              <input 
-                type="text" 
-                placeholder="ID, Cliente..." 
-                className="pl-9 pr-3 h-9 w-48 bg-surface border border-outline-variant rounded focus:border-primary outline-none text-sm"
-              />
-            </div>
-            <select className="h-9 bg-surface border border-outline-variant rounded px-3 text-sm text-primary outline-none focus:border-primary font-semibold">
-              <option>Todos los Estados</option>
-              <option>Preparando</option>
-              <option>Listo</option>
-              <option>Completado</option>
+      {/* Tabla de pedidos */}
+      <div className="flex flex-col flex-1 bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+        {/* Barra de herramientas */}
+        <div className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b border-outline-variant bg-surface-container-highest">
+          <h3 className="text-base font-bold text-primary flex items-center gap-2">
+            <ReceiptText size={19} /> Tabla: PEDIDO
+          </h3>
+          <div className="flex gap-2">
+            <select
+              value={filtroEstado}
+              onChange={(e) => setFiltroEstado(e.target.value)}
+              className="industrial-input h-9 w-auto px-3 text-sm"
+            >
+              <option value="">Todos los estados</option>
+              <option value="Recibido">Recibido</option>
+              <option value="Preparando">Preparando</option>
+              <option value="Listo">Listo</option>
             </select>
           </div>
         </div>
 
-        {/* Table Container */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead className="bg-surface-container border-b border-outline-variant sticky top-0 text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-              <tr>
-                <th className="p-4">ID Pedido</th>
-                <th className="p-4">Hora</th>
-                <th className="p-4">Cliente</th>
-                <th className="p-4">Artículos</th>
-                <th className="p-4">Total</th>
+        {/* Tabla */}
+        <div className="overflow-x-auto flex-1">
+          <table className="w-full">
+            <thead>
+              <tr className="text-xs text-on-surface-variant uppercase border-b border-outline-variant bg-surface-container-high">
+                <th className="text-left p-4">ID Pedido</th>
+                <th className="text-left p-4">Hora</th>
+                <th className="text-left p-4">Cliente</th>
+                <th className="p-4">Tipo</th>
+                <th className="text-right p-4">Total</th>
                 <th className="p-4">Estado</th>
-                <th className="p-4 text-right">Acciones</th>
+                <th className="p-4 text-right">Acc.</th>
               </tr>
             </thead>
-            <tbody className="text-sm text-primary divide-y divide-outline-variant/50">
-              
-              {/* Row 1 (Urgent) */}
-              <tr className="hover:bg-surface-variant transition-colors bg-error-container/20">
-                <td className="p-4 font-mono font-bold">#ORD-9921</td>
-                <td className="p-4 text-on-surface-variant">14:02:45</td>
-                <td className="p-4 font-bold">Sarah Jenkins</td>
-                <td className="p-4">2x Clásica, 1x Papas</td>
-                <td className="p-4 font-mono">$24.50</td>
-                <td className="p-4">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#ba1a1a] text-white text-[10px] font-black uppercase tracking-wider rounded">
-                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></span>
-                    Urgente
-                  </span>
-                </td>
-                <td className="p-4 text-right">
-                  <button className="text-on-surface-variant hover:text-primary transition-colors p-1"><MoreVertical size={18} /></button>
-                </td>
-              </tr>
-
-              {/* Row 2 (Preparing) */}
-              <tr className="hover:bg-surface-variant transition-colors">
-                <td className="p-4 font-mono font-bold">#ORD-9922</td>
-                <td className="p-4 text-on-surface-variant">14:05:12</td>
-                <td className="p-4 font-bold">Mike T.</td>
-                <td className="p-4">1x Doble, 1x Batido</td>
-                <td className="p-4 font-mono">$18.00</td>
-                <td className="p-4">
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#fbbf24] text-black text-[10px] font-black uppercase tracking-wider rounded">
-                    <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse"></span>
-                    Prep
-                  </span>
-                </td>
-                <td className="p-4 text-right">
-                  <button className="text-on-surface-variant hover:text-primary transition-colors p-1"><MoreVertical size={18} /></button>
-                </td>
-              </tr>
-
-              {/* Row 3 (Ready) */}
-              <tr className="hover:bg-surface-variant transition-colors">
-                <td className="p-4 font-mono font-bold">#ORD-9923</td>
-                <td className="p-4 text-on-surface-variant">14:08:33</td>
-                <td className="p-4 font-bold">En local</td>
-                <td className="p-4">3x Papas, 3x Refrescos</td>
-                <td className="p-4 font-mono">$15.00</td>
-                <td className="p-4">
-                  <span className="inline-flex items-center px-2.5 py-1 bg-[#10b981] text-white text-[10px] font-black uppercase tracking-wider rounded">
-                    Listo
-                  </span>
-                </td>
-                <td className="p-4 text-right">
-                  <button className="text-on-surface-variant hover:text-primary transition-colors p-1"><MoreVertical size={18} /></button>
-                </td>
-              </tr>
-
-              {/* Row 4 (Completed) */}
-              <tr className="hover:bg-surface-variant transition-colors opacity-70">
-                <td className="p-4 font-mono font-bold">#ORD-9919</td>
-                <td className="p-4 text-on-surface-variant">13:45:00</td>
-                <td className="p-4 font-bold">Uber Eats #A1</td>
-                <td className="p-4">1x Hamb. Vegana</td>
-                <td className="p-4 font-mono">$12.50</td>
-                <td className="p-4">
-                  <span className="inline-flex items-center px-2.5 py-1 bg-surface-dim text-on-surface-variant text-[10px] font-black uppercase tracking-wider rounded border border-outline-variant">
-                    Hecho
-                  </span>
-                </td>
-                <td className="p-4 text-right">
-                  <button className="text-on-surface-variant hover:text-primary transition-colors p-1"><MoreVertical size={18} /></button>
-                </td>
-              </tr>
-
-              {/* Row 5 (Completed) */}
-              <tr className="hover:bg-surface-variant transition-colors opacity-70">
-                <td className="p-4 font-mono font-bold">#ORD-9918</td>
-                <td className="p-4 text-on-surface-variant">13:42:10</td>
-                <td className="p-4 font-bold">David K.</td>
-                <td className="p-4">2x Clásica, 1x Aros de Cebolla</td>
-                <td className="p-4 font-mono">$26.00</td>
-                <td className="p-4">
-                  <span className="inline-flex items-center px-2.5 py-1 bg-surface-dim text-on-surface-variant text-[10px] font-black uppercase tracking-wider rounded border border-outline-variant">
-                    Hecho
-                  </span>
-                </td>
-                <td className="p-4 text-right">
-                  <button className="text-on-surface-variant hover:text-primary transition-colors p-1"><MoreVertical size={18} /></button>
-                </td>
-              </tr>
-
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="p-10 text-center text-on-surface-variant">
+                    <Loader2 size={24} className="animate-spin inline mr-2" /> Cargando...
+                  </td>
+                </tr>
+              ) : pedidosPagina.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-10 text-center text-on-surface-variant">
+                    No se encontraron pedidos con ese filtro.
+                  </td>
+                </tr>
+              ) : (
+                pedidosPagina.map((p) => (
+                  <tr
+                    key={p.id_pedido}
+                    className="border-b border-outline-variant/40 last:border-0 hover:bg-surface-container-low transition-colors fade-in-up"
+                  >
+                    <td className="p-4 font-mono font-black text-primary">#{p.id_pedido}</td>
+                    <td className="p-4 text-sm text-on-surface-variant">{p.hora_creacion}</td>
+                    <td className="p-4 font-bold text-on-surface">{p.cliente_nombre}</td>
+                    <td className="p-4 text-center capitalize text-sm text-on-surface-variant">{p.tipo}</td>
+                    <td className="p-4 text-right font-mono font-bold text-secondary-container">${p.total.toFixed(2)}</td>
+                    <td className="p-4"><BadgeEstatus estatus={p.Estatus_Orden} /></td>
+                    <td className="p-4 text-right">
+                      <button className="text-on-surface-variant hover:text-on-surface transition-colors p-1">
+                        <MoreVertical size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {/* Pagination */}
-        <div className="p-4 border-t border-outline-variant bg-surface-container-low flex justify-between items-center mt-auto">
-          <span className="text-sm text-on-surface-variant">Mostrando 1-5 de 1.248</span>
-          <div className="flex gap-2">
-            <button className="h-8 w-8 flex items-center justify-center border border-outline-variant rounded bg-surface text-on-surface-variant hover:bg-surface-variant disabled:opacity-50" disabled>
-              <ChevronLeft size={18} />
+        {/* Paginación */}
+        <div className="p-4 flex justify-between items-center border-t border-outline-variant bg-surface-container-highest">
+          <span className="text-sm text-on-surface-variant">
+            {pedidos.length > 0
+              ? `Mostrando ${(pagina - 1) * ITEMS_POR_PAGINA + 1}–${Math.min(pagina * ITEMS_POR_PAGINA, pedidos.length)} de ${pedidos.length}`
+              : '0 resultados'}
+          </span>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setPagina((p) => Math.max(1, p - 1))}
+              disabled={pagina === 1}
+              className="w-8 h-8 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-variant transition-colors disabled:opacity-40"
+            >
+              <ChevronLeft size={16} />
             </button>
-            <button className="h-8 w-8 flex items-center justify-center border border-primary bg-primary text-on-primary rounded text-sm font-bold">1</button>
-            <button className="h-8 w-8 flex items-center justify-center border border-outline-variant rounded bg-surface text-on-surface hover:bg-surface-variant text-sm font-bold">2</button>
-            <button className="h-8 w-8 flex items-center justify-center border border-outline-variant rounded bg-surface text-on-surface hover:bg-surface-variant text-sm font-bold">3</button>
-            <span className="h-8 w-8 flex items-center justify-center text-on-surface-variant">...</span>
-            <button className="h-8 w-8 flex items-center justify-center border border-outline-variant rounded bg-surface text-on-surface hover:bg-surface-variant">
-              <ChevronRight size={18} />
+            {Array.from({ length: Math.min(totalPaginas, 5) }, (_, i) => i + 1).map((n) => (
+              <button
+                key={n}
+                onClick={() => setPagina(n)}
+                className={`w-8 h-8 flex items-center justify-center border rounded text-xs font-bold transition-colors ${
+                  pagina === n
+                    ? 'bg-primary text-on-primary border-primary'
+                    : 'border-outline-variant hover:bg-surface-variant'
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+            <button
+              onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+              disabled={pagina === totalPaginas}
+              className="w-8 h-8 flex items-center justify-center border border-outline-variant rounded hover:bg-surface-variant transition-colors disabled:opacity-40"
+            >
+              <ChevronRight size={16} />
             </button>
           </div>
         </div>
-
       </div>
-      <div className="h-8 shrink-0"></div>
+
+      <div className="h-4 shrink-0" />
     </div>
   );
 }

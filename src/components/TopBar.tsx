@@ -1,73 +1,79 @@
-import { Bell, HelpCircle, Search, Terminal } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Bell, Search, ChefHat } from 'lucide-react';
 
 interface TopBarProps {
   currentView: string;
   setView: (view: string) => void;
 }
 
-export default function TopBar({ currentView, setView }: TopBarProps) {
-  return (
-    <header className="bg-surface text-primary border-b border-outline-variant sticky top-0 z-30 flex justify-between items-center w-full px-8 h-16 shrink-0">
-      {/* Brand/Product Logo (Visible more on mobile, or just as structural anchor) */}
-      <div className="flex items-center gap-8 h-full">
-        <div className="font-mono text-lg font-bold text-secondary uppercase tracking-widest flex items-center gap-2">
-          <Terminal size={24} />
-          <span className="hidden md:inline">UDO-FAT ADMIN v1.0</span>
-        </div>
+const LABELS: Record<string, string> = {
+  pos:       'Punto de Venta',
+  orders:    'Pedidos',
+  kitchen:   'Panel de Cocina',
+  inventory: 'Inventario',
+  suppliers: 'Proveedores',
+  reports:   'Reportes y Datos',
+};
 
-        {/* Navigation Links */}
-        <nav className="hidden lg:flex gap-8 h-full items-end">
-          <button 
-            onClick={() => setView('pos')}
-            className={`text-sm font-bold pb-4 cursor-pointer transition-opacity border-b-2 ${currentView === 'pos' ? 'text-secondary border-secondary' : 'text-on-surface-variant border-transparent hover:text-secondary'}`}
-          >
-            Vista en Vivo
-          </button>
-          <button 
-            onClick={() => setView('kitchen')}
-            className={`text-sm font-bold pb-4 cursor-pointer transition-opacity border-b-2 ${currentView === 'kitchen' ? 'text-secondary border-secondary' : 'text-on-surface-variant border-transparent hover:text-secondary'}`}
-          >
-            Cocina
-          </button>
-          <button 
-            onClick={() => setView('reports')}
-            className={`text-sm font-bold pb-4 cursor-pointer transition-opacity border-b-2 ${currentView === 'reports' ? 'text-secondary border-secondary' : 'text-on-surface-variant border-transparent hover:text-secondary'}`}
-          >
-            Reportes
-          </button>
-        </nav>
+export default function TopBar({ currentView, setView: _setView }: TopBarProps) {
+  const [hora, setHora] = useState('');
+
+  useEffect(() => {
+    const tick = () =>
+      setHora(new Date().toLocaleTimeString('es-VE', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: 'America/Caracas',
+      }));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <header className="bg-white border-b border-outline-variant sticky top-0 z-30 flex justify-between items-center w-full px-6 h-14 shrink-0 shadow-sm">
+
+      {/* ── Título de la vista actual ─────────────────────── */}
+      <div className="flex items-center gap-3">
+        <ChefHat size={18} className="text-secondary-container shrink-0" />
+        <div className="hidden md:block h-4 w-px bg-outline-variant" />
+        <h1 className="text-sm font-bold text-on-surface tracking-wide">
+          {LABELS[currentView] ?? currentView}
+        </h1>
       </div>
 
-      {/* Trailing Actions & Search */}
-      <div className="flex items-center gap-6">
-        {/* Search placeholder for reports view mostly, but good to have globally */}
+      {/* ── Reloj ────────────────────────────────────────────── */}
+      {hora && (
+        <span className="hidden md:block font-mono text-sm font-bold text-on-surface-variant tabular-nums">
+          {hora}
+        </span>
+      )}
+
+      {/* ── Acciones ──────────────────────────────────────── */}
+      <div className="flex items-center gap-2">
+        {/* Búsqueda global */}
         <div className="relative hidden xl:block">
-          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
-          <input 
-            type="text" 
-            placeholder="Buscar pedidos..." 
-            className="pl-10 pr-4 h-10 w-64 bg-surface-container border border-outline-variant rounded focus:border-secondary focus:ring-1 focus:ring-secondary outline-none text-sm text-primary transition-colors"
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
+          <input
+            type="text"
+            placeholder="Buscar pedidos..."
+            className="pl-8 pr-4 h-8 w-52 bg-surface-container-low border border-outline-variant rounded-lg focus:border-secondary-container focus:ring-1 focus:ring-secondary-container/40 outline-none text-xs text-on-surface transition-colors placeholder:text-outline"
           />
         </div>
 
-        {/* System Status */}
-        <div className="hidden md:flex items-center gap-2 bg-surface-container-low px-3 py-1.5 rounded border border-outline-variant">
-          <div className="w-2 h-2 rounded-full bg-secondary-container animate-pulse"></div>
-          <span className="text-xs font-semibold text-on-surface uppercase tracking-wider">Estado del Sistema: Óptimo</span>
+        {/* Estado del sistema */}
+        <div className="hidden md:flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">
+            En línea
+          </span>
         </div>
 
-        {/* Icons */}
-        <div className="flex items-center gap-2">
-          <button className="p-2 hover:bg-surface-variant rounded transition-colors text-on-surface-variant">
-            <Bell size={20} />
-          </button>
-          <button className="p-2 hover:bg-surface-variant rounded transition-colors text-on-surface-variant">
-            <HelpCircle size={20} />
-          </button>
-          <button className="p-2 lg:hidden hover:bg-surface-variant rounded transition-colors text-on-surface-variant">
-            <Search size={20} />
-          </button>
-        </div>
+        {/* Notificaciones */}
+        <button className="w-8 h-8 flex items-center justify-center hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant relative">
+          <Bell size={17} />
+        </button>
       </div>
     </header>
   );

@@ -105,6 +105,9 @@ export default function PosView() {
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const [ticketActual] = useState(() => nuevoTicketId());
 
+  // Navegación responsiva en móviles: Catálogo vs Carrito
+  const [activeMobileTab, setActiveMobileTab] = useState<'catalog' | 'cart'>('catalog');
+
   // ── Fetch catálogo ──
   useEffect(() => {
     api.getProductos()
@@ -222,10 +225,41 @@ export default function PosView() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex-1 flex bg-background p-6 gap-6 h-full min-h-[calc(100vh-64px)]">
+    <div className="flex-1 flex flex-col lg:flex-row bg-background p-4 lg:p-6 gap-4 lg:gap-6 h-full min-h-[calc(100vh-64px)]">
+      
+      {/* ── Selector de pestaña para móviles ── */}
+      <div className="flex lg:hidden bg-surface-container p-1 rounded-xl border border-outline-variant shrink-0 gap-1">
+        <button
+          onClick={() => setActiveMobileTab('catalog')}
+          className={`flex-1 py-2.5 text-xs font-bold uppercase rounded-lg transition-all flex items-center justify-center gap-2 ${
+            activeMobileTab === 'catalog'
+              ? 'bg-primary text-on-primary shadow-sm'
+              : 'text-on-surface hover:bg-surface-container-high'
+          }`}
+        >
+          🍔 Catálogo
+        </button>
+        <button
+          onClick={() => setActiveMobileTab('cart')}
+          className={`flex-1 py-2.5 text-xs font-bold uppercase rounded-lg transition-all flex items-center justify-center gap-2 relative ${
+            activeMobileTab === 'cart'
+              ? 'bg-primary text-on-primary shadow-sm'
+              : 'text-on-surface hover:bg-surface-container-high'
+          }`}
+        >
+          🛒 Carrito ({carrito.reduce((acc, c) => acc + c.cantidad, 0)})
+          {carrito.length > 0 && (
+            <span className="absolute -top-1 -right-1 bg-secondary-container text-white text-[10px] w-5 h-5 rounded-full flex items-center justify-center font-bold border-2 border-background animate-pulse">
+              {carrito.reduce((acc, c) => acc + c.cantidad, 0)}
+            </span>
+          )}
+        </button>
+      </div>
 
       {/* ── Catálogo (izquierda) ── */}
-      <section className="flex-1 flex flex-col bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm">
+      <section className={`flex-1 flex flex-col bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm ${
+        activeMobileTab === 'catalog' ? 'flex' : 'hidden lg:flex'
+      }`}>
 
         {/* Tabs de categorías */}
         <div className="flex border-b border-outline-variant bg-surface-container-highest overflow-x-auto shrink-0">
@@ -272,139 +306,101 @@ export default function PosView() {
         </div>
 
         {/* Grid de productos */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-4 lg:p-6">
           {errorProductos && (
-            <div className="flex items-center gap-3 text-on-error-container bg-error-container border border-error p-4 rounded mb-4 text-sm">
+            <div className="bg-error-container text-on-error-container p-4 rounded-lg flex items-center gap-3 border border-error text-sm">
               <AlertTriangle size={18} /> {errorProductos}
             </div>
           )}
-          <div className="grid grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4 content-start stagger">
-            {productosFiltrados.map((producto) => {
-              const inCart = carrito.find(i => i.producto.id_producto === producto.id_producto);
-              return (
-                <article
-                  key={producto.id_producto}
-                  onClick={() => agregarAlCarrito(producto)}
-                  className={`fade-in-up bg-surface border rounded-lg p-3 flex flex-col gap-3 transition-all duration-150 ${
-                    producto.disponible
-                      ? 'border-outline-variant hover:border-secondary-container hover:shadow-md cursor-pointer group'
-                      : 'border-outline-variant opacity-50 grayscale cursor-not-allowed'
-                  } ${inCart ? 'border-secondary-container ring-2 ring-secondary-container/20' : ''}`}
+
+          {!errorProductos && productosFiltrados.length === 0 && (
+            <div className="text-center py-16 text-on-surface-variant text-sm">
+              No se encontraron productos en esta categoría.
+            </div>
+          )}
+
+          {!errorProductos && productosFiltrados.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+              {productosFiltrados.map((prod) => (
+                <button
+                  key={prod.id_producto}
+                  onClick={() => {
+                    agregarAlCarrito(prod);
+                    showToast('success', `Añadido: ${prod.nombre}`);
+                  }}
+                  disabled={!prod.disponible}
+                  className={`bg-surface border border-outline-variant rounded-xl p-4 flex flex-col justify-between items-start text-left hover:shadow-md transition-all active:scale-[0.98] ${
+                    !prod.disponible ? 'opacity-50 cursor-not-allowed' : ''
+                  }`}
                 >
-                  <div className="aspect-square bg-surface-variant rounded overflow-hidden relative">
-                    {producto.imagen_url ? (
-                      <img
-                        src={producto.imagen_url}
-                        alt={producto.nombre}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-5xl select-none">
-                        🍔
-                      </div>
-                    )}
-                    {!producto.disponible && (
-                      <span className="absolute inset-0 bg-surface/70 flex items-center justify-center text-xs font-black text-error uppercase tracking-widest backdrop-blur-sm z-10">
-                        Agotado
-                      </span>
-                    )}
-                    {inCart && (
-                      <div className="absolute top-2 right-2 w-6 h-6 rounded-full bg-secondary-container text-white flex items-center justify-center text-xs font-black shadow-md">
-                        {inCart.cantidad}
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex flex-col flex-1">
-                    <h3 className="text-base font-bold text-on-surface leading-tight">
-                      {producto.nombre}
+                  <div className="w-full">
+                    <span className="bg-surface-container-high text-on-surface-variant text-[10px] font-bold uppercase px-2 py-0.5 rounded tracking-wide">
+                      {prod.categoria}
+                    </span>
+                    <h3 className="text-base font-bold text-on-surface mt-2 leading-tight">
+                      {prod.nombre}
                     </h3>
                     <p className="text-xs text-on-surface-variant mt-1 line-clamp-2">
-                      {producto.descripcion}
+                      {prod.descripcion}
                     </p>
                   </div>
-                  <div className="flex items-center justify-between mt-auto pt-3 border-t border-surface-variant">
-                    <span className="font-mono text-lg font-bold text-primary">
-                      ${producto.precio.toFixed(2)}
+                  <div className="w-full flex justify-between items-center mt-4 pt-3 border-t border-surface-dim">
+                    <span className="font-mono text-xl font-black text-secondary-container">
+                      ${prod.precio.toFixed(2)}
                     </span>
-                    {producto.disponible && (
-                      <div className="w-8 h-8 rounded bg-primary text-on-primary flex items-center justify-center group-hover:bg-secondary-container group-hover:text-on-secondary-container transition-colors active:scale-95">
-                        <Plus size={18} />
-                      </div>
-                    )}
+                    <span className={`text-xs font-bold ${prod.disponible ? 'text-emerald-600' : 'text-error'}`}>
+                      {prod.disponible ? 'Disponible' : 'Agotado'}
+                    </span>
                   </div>
-                </article>
-              );
-            })}
-          </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
-      {/* ── Panel derecho: Formulario + Carrito ── */}
-      <aside className="w-[460px] flex flex-col gap-4 shrink-0">
-
-        {/* Datos del cliente */}
-        <div className="bg-surface-container-low border border-outline-variant rounded-xl p-5 flex flex-col gap-3 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-1 bg-primary" />
-          <h2 className="text-sm font-bold text-primary flex items-center gap-2 uppercase tracking-wide border-b border-outline-variant pb-2">
-            <UserPlus size={16} /> Registro de Cliente
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
+      {/* ── Carrito y Cliente (derecha) ── */}
+      <aside className={`w-full lg:w-[420px] flex flex-col bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm shrink-0 ${
+        activeMobileTab === 'cart' ? 'flex' : 'hidden lg:flex'
+      }`}>
+        
+        {/* Info del Cliente */}
+        <div className="p-4 border-b border-outline-variant bg-surface shrink-0">
+          <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Datos del Cliente</label>
+          <div className="space-y-3">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={cliente.cedula}
+                  onChange={(e) => setCliente((c) => ({ ...c, cedula: e.target.value }))}
+                  placeholder="Cédula/RIF"
+                  className="industrial-input font-mono uppercase"
+                />
+              </div>
+              <div className="flex-1">
+                <input
+                  type="text"
+                  value={cliente.telefono}
+                  onChange={(e) => setCliente((c) => ({ ...c, telefono: e.target.value }))}
+                  placeholder="Teléfono"
+                  className="industrial-input font-mono"
+                />
+              </div>
+            </div>
             <div>
-              <label className="text-xs font-bold text-on-surface-variant uppercase mb-1 block">Cédula / RIF</label>
               <input
-                value={cliente.cedula}
-                onChange={(e) => setCliente((p) => ({ ...p, cedula: e.target.value }))}
                 type="text"
-                placeholder="V-12345678"
-                className="industrial-input font-mono text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-on-surface-variant uppercase mb-1 block">Teléfono</label>
-              <input
-                value={cliente.telefono}
-                onChange={(e) => setCliente((p) => ({ ...p, telefono: e.target.value }))}
-                type="tel"
-                placeholder="0414-0000000"
-                className="industrial-input font-mono text-sm"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="text-xs font-bold text-on-surface-variant uppercase mb-1 block">
-                Nombre del Cliente <span className="text-error">*</span>
-              </label>
-              <input
                 value={cliente.nombre}
-                onChange={(e) => setCliente((p) => ({ ...p, nombre: e.target.value }))}
-                type="text"
+                onChange={(e) => setCliente((c) => ({ ...c, nombre: e.target.value }))}
                 placeholder="EJ. JUAN PEREZ"
                 className="industrial-input uppercase"
               />
             </div>
           </div>
-        </div>
-
-        {/* Carrito + Tipo de pedido */}
-        <div className="flex-1 bg-surface-container-low border border-outline-variant rounded-xl flex flex-col shadow-sm relative overflow-hidden min-h-0">
-          <div className="absolute top-0 left-0 w-full h-1 bg-secondary-container" />
-
-          {/* Header del ticket */}
-          <div className="p-4 border-b border-outline-variant bg-surface flex justify-between items-center shrink-0 mt-1">
-            <div>
-              <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest block">ID Ticket</span>
-              <span className="font-mono text-2xl font-black text-primary leading-none mt-0.5 block">
-                #ORD-{ticketActual}
-              </span>
-            </div>
-            <div className="bg-primary text-on-primary px-3 py-1.5 rounded font-mono text-sm flex items-center gap-2">
-              <Timer size={16} />
-              {carrito.length} ítem{carrito.length !== 1 ? 's' : ''}
-            </div>
-          </div>
 
           {/* Selector de tipo de pedido */}
-          <div className="p-4 border-b border-outline-variant bg-surface-container-highest shrink-0">
-            <label className="text-xs font-bold text-on-surface-variant uppercase mb-2 block">Tipo de Pedido</label>
+          <div className="mt-4">
             <div className="flex gap-2 bg-surface-dim p-1 rounded-lg">
               {(['mesa', 'pickup', 'delivery'] as const).map((tipo) => (
                 <button
@@ -416,9 +412,6 @@ export default function PosView() {
                       : 'bg-transparent text-on-surface hover:bg-surface'
                   }`}
                 >
-                  {tipo === 'mesa' && <Armchair size={15} />}
-                  {tipo === 'pickup' && <ShoppingBag size={15} />}
-                  {tipo === 'delivery' && <Bike size={15} />}
                   {tipo === 'mesa' ? 'Mesa' : tipo === 'pickup' ? 'Llevar' : 'Delivery'}
                 </button>
               ))}
@@ -428,145 +421,156 @@ export default function PosView() {
             <div className="mt-3 min-h-[52px]">
               {orderType === 'mesa' && (
                 <div className="flex gap-3">
-                  <input
-                    value={mesa}
-                    onChange={(e) => setMesa(e.target.value)}
-                    type="number"
-                    min="1"
-                    placeholder="N°"
-                    className="industrial-input font-mono text-xl w-20 text-center"
-                  />
-                  <div className="flex-1 text-xs font-semibold text-on-surface-variant bg-surface-container p-3 rounded border border-outline-variant flex items-center gap-2">
-                    <Info size={15} className="shrink-0" />
-                    Verifique disponibilidad antes de asignar.
+                  <div className="w-20">
+                    <input
+                      type="number"
+                      value={mesa}
+                      onChange={(e) => setMesa(e.target.value)}
+                      placeholder="Mesa"
+                      className="industrial-input text-center font-bold"
+                      min={1}
+                    />
+                  </div>
+                  <div className="flex-1 flex items-center gap-2 text-xs text-on-surface-variant font-medium">
+                    <Info size={14} className="shrink-0" />
+                    <span>Ingrese el número de la mesa asignada.</span>
                   </div>
                 </div>
               )}
+
+              {orderType === 'pickup' && (
+                <div className="flex items-center gap-2 text-xs text-on-surface-variant font-medium py-3">
+                  <Info size={14} className="shrink-0" />
+                  <span>El cliente retirará el pedido por el local.</span>
+                </div>
+              )}
+
               {orderType === 'delivery' && (
                 <div>
-                  <label className="text-xs font-bold text-on-surface-variant uppercase mb-1 block">Dirección de Envío</label>
-                  <textarea
+                  <input
+                    type="text"
                     value={direccion}
                     onChange={(e) => setDireccion(e.target.value)}
-                    rows={2}
-                    placeholder="Sector, Calle, Casa, Referencia..."
-                    className="industrial-input h-auto py-2 resize-none text-sm"
+                    placeholder="Dirección detallada de entrega"
+                    className="industrial-input"
                   />
                 </div>
               )}
             </div>
           </div>
+        </div>
 
-          {/* Lista de ítems del carrito */}
-          <div className="flex-1 overflow-y-auto p-3 bg-surface">
-            {carrito.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-on-surface-variant text-center py-8 gap-2">
-                <ShoppingBag size={40} className="opacity-20" />
-                <span className="text-sm font-bold">Carrito vacío</span>
-                <span className="text-xs">Selecciona productos del catálogo</span>
-              </div>
-            ) : (
-              carrito.map((item) => (
-                <div
-                  key={item.producto.id_producto}
-                  className="bg-surface-container border border-outline-variant p-3 rounded mb-2 flex flex-col gap-2 fade-in"
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm font-bold text-primary uppercase truncate flex-1 mr-2">
+        {/* Lista de productos en carrito */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0">
+          {carrito.length === 0 ? (
+            <div className="h-full flex flex-col items-center justify-center text-center text-on-surface-variant py-12">
+              <ShoppingBag size={36} className="opacity-40 mb-2" />
+              <p className="text-sm font-semibold">El carrito está vacío</p>
+              <p className="text-xs mt-1">Selecciona productos a la izquierda para agregarlos.</p>
+            </div>
+          ) : (
+            carrito.map((item) => (
+              <div
+                key={item.producto.id_producto}
+                className="bg-surface border border-outline-variant rounded-xl p-3 flex flex-col gap-2 relative shadow-sm hover:shadow transition-shadow"
+              >
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wide block">
+                      {item.producto.categoria}
+                    </span>
+                    <h4 className="text-sm font-black text-on-surface mt-0.5 leading-snug">
                       {item.producto.nombre}
-                    </span>
-                    <span className="font-mono font-bold text-sm shrink-0">
-                      ${(item.producto.precio * item.cantidad).toFixed(2)}
-                    </span>
+                    </h4>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => cambiarCantidad(item.producto.id_producto, -1)}
-                        className="w-7 h-7 rounded bg-surface-dim border border-outline-variant flex items-center justify-center hover:bg-error-container hover:text-on-error-container transition-colors"
-                      >
-                        <Minus size={13} />
-                      </button>
-                      <span className="font-mono font-bold w-5 text-center text-sm">
-                        {item.cantidad}
-                      </span>
-                      <button
-                        onClick={() => cambiarCantidad(item.producto.id_producto, 1)}
-                        className="w-7 h-7 rounded bg-surface-dim border border-outline-variant flex items-center justify-center hover:bg-surface-variant transition-colors"
-                      >
-                        <Plus size={13} />
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => eliminarItem(item.producto.id_producto)}
-                      className="text-on-surface-variant hover:text-error text-xs flex items-center gap-1 font-bold transition-colors"
-                    >
-                      <Trash2 size={13} /> Quitar
-                    </button>
-                  </div>
+                  <button
+                    onClick={() => eliminarItem(item.producto.id_producto)}
+                    className="text-on-surface-variant hover:text-error transition-colors p-1"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+
+                {/* Notas del item */}
+                <div>
                   <input
+                    type="text"
                     value={item.notas}
                     onChange={(e) => actualizarNotas(item.producto.id_producto, e.target.value)}
-                    placeholder="Notas (ej: SIN CEBOLLA)"
-                    className="text-xs border border-outline-variant rounded px-2 py-1 bg-surface-dim outline-none focus:border-secondary-container w-full"
+                    placeholder="Notas especiales (ej. sin cebolla)"
+                    className="w-full text-xs bg-surface-container border-b border-outline outline-none py-1 focus:border-secondary-container transition-colors placeholder:text-outline/60 text-on-surface"
                   />
                 </div>
-              ))
-            )}
-          </div>
 
-          {/* Totales y botón de envío */}
-          <div className="bg-surface-container-highest border-t border-outline-variant p-5 flex flex-col gap-3 shrink-0">
-            {errorEnvio && (
-              <div className="bg-error-container text-on-error-container text-xs font-bold px-3 py-2 rounded flex items-start gap-2">
-                <AlertTriangle size={14} className="mt-0.5 shrink-0" /> {errorEnvio}
+                <div className="flex justify-between items-center mt-1 pt-2 border-t border-surface-dim">
+                  <div className="flex items-center gap-1 bg-surface-container rounded-lg border border-outline-variant p-0.5">
+                    <button
+                      onClick={() => cambiarCantidad(item.producto.id_producto, -1)}
+                      className="w-7 h-7 flex items-center justify-center text-on-surface hover:bg-surface rounded-md transition-colors"
+                    >
+                      <Minus size={13} />
+                    </button>
+                    <span className="w-8 text-center font-mono text-sm font-bold text-primary">
+                      {item.cantidad}
+                    </span>
+                    <button
+                      onClick={() => cambiarCantidad(item.producto.id_producto, 1)}
+                      className="w-7 h-7 flex items-center justify-center text-on-surface hover:bg-surface rounded-md transition-colors"
+                    >
+                      <Plus size={13} />
+                    </button>
+                  </div>
+                  <span className="font-mono text-base font-bold text-secondary-container">
+                    ${(item.producto.precio * item.cantidad).toFixed(2)}
+                  </span>
+                </div>
               </div>
-            )}
-            <div className="flex justify-between text-on-surface-variant text-sm">
-              <span className="font-bold uppercase">Subtotal</span>
-              <span className="font-mono">${subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-on-surface-variant text-sm border-b border-outline-variant pb-2">
-              <span className="font-bold uppercase">IVA (16%)</span>
-              <span className="font-mono">${iva.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between items-end">
-              <span className="text-lg uppercase text-primary font-black">Total a Pagar</span>
-              <span className="font-mono text-3xl text-secondary-container leading-none font-black">
-                ${total.toFixed(2)}
-              </span>
-            </div>
+            ))
+          )}
+        </div>
 
-            <button
-              onClick={procesarPedido}
-              disabled={enviando || carrito.length === 0}
-              className="mt-2 w-full h-14 bg-secondary-container hover:bg-secondary active:bg-secondary-container active:scale-[0.98] transition-all text-on-secondary-container text-base font-black uppercase tracking-widest rounded-lg flex items-center justify-center gap-3 shadow-[inset_0_-4px_0_rgba(0,0,0,0.2)] disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {enviando ? (
-                <Loader2 size={22} className="animate-spin" />
-              ) : (
-                <>
-                  <Send size={20} /> Procesar Pedido
-                </>
-              )}
-            </button>
-
-            {/* Imprimir comanda */}
-            {carrito.length > 0 && !enviando && (
-              <button
-                onClick={() => window.print()}
-                className="w-full h-9 border border-outline-variant rounded-lg text-xs font-bold text-on-surface-variant hover:bg-surface-variant flex items-center justify-center gap-2 transition-colors"
-              >
-                <Printer size={14} /> Imprimir comanda
-              </button>
-            )}
-
-            {carrito.length > 0 && !enviando && (
-              <p className="text-center text-xs text-on-surface-variant flex items-center justify-center gap-1">
-                <MessageCircle size={12} /> Se abrirá un enlace de WhatsApp al confirmar
-              </p>
-            )}
+        {/* Totales y botón de confirmación */}
+        <div className="p-4 border-t border-outline-variant bg-surface space-y-3 shrink-0">
+          <div className="space-y-1.5 text-xs border-b border-surface-dim pb-3">
+            <div className="flex justify-between text-on-surface-variant">
+              <span>Subtotal</span>
+              <span className="font-mono font-medium">${subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-on-surface-variant">
+              <span>IVA (16%)</span>
+              <span className="font-mono font-medium">${iva.toFixed(2)}</span>
+            </div>
           </div>
+          <div className="flex justify-between items-end">
+            <span className="text-lg uppercase text-primary font-black">Total a Pagar</span>
+            <span className="font-mono text-3xl text-secondary-container leading-none font-black">
+              ${total.toFixed(2)}
+            </span>
+          </div>
+
+          <button
+            onClick={procesarPedido}
+            disabled={enviando || carrito.length === 0}
+            className="w-full h-12 bg-secondary-container text-on-secondary-container text-sm font-black uppercase rounded-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+          >
+            {enviando ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+            {enviando ? 'Procesando...' : 'Confirmar Pedido'}
+          </button>
+
+          {carrito.length > 0 && !enviando && (
+            <button
+              onClick={() => window.print()}
+              className="w-full h-9 border border-outline-variant rounded-lg text-xs font-bold text-on-surface-variant hover:bg-surface-variant flex items-center justify-center gap-2 transition-colors"
+            >
+              <Printer size={14} /> Imprimir comanda
+            </button>
+          )}
+
+          {carrito.length > 0 && !enviando && (
+            <p className="text-center text-xs text-on-surface-variant flex items-center justify-center gap-1">
+              <MessageCircle size={12} /> Se abrirá un enlace de WhatsApp al confirmar
+            </p>
+          )}
         </div>
       </aside>
     </div>

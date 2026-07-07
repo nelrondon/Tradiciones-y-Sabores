@@ -208,7 +208,7 @@ export default function ReportsView() {
 
         {/* Tabla */}
         <div className="overflow-x-auto flex-1">
-          <table className="w-full">
+          <table className="w-full min-w-[750px]">
             <thead>
               <tr className="text-xs text-on-surface-variant uppercase border-b border-outline-variant bg-surface-container-high">
                 <th className="text-left p-4">ID Pedido</th>

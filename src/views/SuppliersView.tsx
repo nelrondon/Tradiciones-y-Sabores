@@ -183,62 +183,64 @@ export default function SuppliersView() {
 
       {/* Tabla */}
       <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full">
-          <thead>
-            <tr className="text-xs text-on-surface-variant uppercase bg-surface-container-highest border-b border-outline-variant">
-              <th className="text-left p-4">Nombre / Empresa</th>
-              <th className="p-4">RIF</th>
-              <th className="p-4">Contacto</th>
-              <th className="p-4">Teléfono</th>
-              <th className="p-4">Email</th>
-              <th className="p-4 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr><td colSpan={6} className="p-10 text-center text-on-surface-variant">
-                <Loader2 size={24} className="animate-spin inline mr-2" /> Cargando proveedores...
-              </td></tr>
-            ) : proveedores.length === 0 ? (
-              <tr><td colSpan={6} className="p-10 text-center text-on-surface-variant">
-                No hay proveedores registrados. Agrega el primero.
-              </td></tr>
-            ) : (
-              proveedores.map((p) => (
-                <tr key={p.id_proveedor}
-                  className="border-b border-outline-variant/50 last:border-0 hover:bg-surface-container-low transition-colors fade-in-up">
-                  <td className="p-4 font-bold text-on-surface">{p.nombre}</td>
-                  <td className="p-4 text-center font-mono text-sm text-on-surface-variant">{p.rif}</td>
-                  <td className="p-4 text-center text-on-surface">{p.contacto || '—'}</td>
-                  <td className="p-4 text-center font-mono text-sm">
-                    <a href={`tel:${p.telefono}`} className="text-secondary-container hover:underline">
-                      {p.telefono}
-                    </a>
-                  </td>
-                  <td className="p-4 text-center text-sm">
-                    {p.email
-                      ? <a href={`mailto:${p.email}`} className="text-secondary-container hover:underline">{p.email}</a>
-                      : <span className="text-on-surface-variant">—</span>}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => abrirEditar(p)}
-                        className="text-on-surface-variant hover:text-secondary-container transition-colors p-1">
-                        <Edit2 size={16} />
-                      </button>
-                      <button onClick={() => eliminar(p.id_proveedor)} disabled={eliminando === p.id_proveedor}
-                        className="text-on-surface-variant hover:text-error transition-colors p-1 disabled:opacity-50">
-                        {eliminando === p.id_proveedor
-                          ? <Loader2 size={16} className="animate-spin" />
-                          : <Trash2 size={16} />}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px]">
+            <thead>
+              <tr className="text-xs text-on-surface-variant uppercase bg-surface-container-highest border-b border-outline-variant">
+                <th className="text-left p-4">Nombre / Empresa</th>
+                <th className="p-4">RIF</th>
+                <th className="p-4">Contacto</th>
+                <th className="p-4">Teléfono</th>
+                <th className="p-4">Email</th>
+                <th className="p-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={6} className="p-10 text-center text-on-surface-variant">
+                  <Loader2 size={24} className="animate-spin inline mr-2" /> Cargando proveedores...
+                </td></tr>
+              ) : proveedores.length === 0 ? (
+                <tr><td colSpan={6} className="p-10 text-center text-on-surface-variant">
+                  No hay proveedores registrados. Agrega el primero.
+                </td></tr>
+              ) : (
+                proveedores.map((p) => (
+                  <tr key={p.id_proveedor}
+                    className="border-b border-outline-variant/50 last:border-0 hover:bg-surface-container-low transition-colors fade-in-up">
+                    <td className="p-4 font-bold text-on-surface">{p.nombre}</td>
+                    <td className="p-4 text-center font-mono text-sm text-on-surface-variant">{p.rif}</td>
+                    <td className="p-4 text-center text-on-surface">{p.contacto || '—'}</td>
+                    <td className="p-4 text-center font-mono text-sm">
+                      <a href={`tel:${p.telefono}`} className="text-secondary-container hover:underline">
+                        {p.telefono}
+                      </a>
+                    </td>
+                    <td className="p-4 text-center text-sm">
+                      {p.email
+                        ? <a href={`mailto:${p.email}`} className="text-secondary-container hover:underline">{p.email}</a>
+                        : <span className="text-on-surface-variant">—</span>}
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => abrirEditar(p)}
+                          className="text-on-surface-variant hover:text-secondary-container transition-colors p-1">
+                          <Edit2 size={16} />
+                        </button>
+                        <button onClick={() => eliminar(p.id_proveedor)} disabled={eliminando === p.id_proveedor}
+                          className="text-on-surface-variant hover:text-error transition-colors p-1 disabled:opacity-50">
+                          {eliminando === p.id_proveedor
+                            ? <Loader2 size={16} className="animate-spin" />
+                            : <Trash2 size={16} />}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showModal && (

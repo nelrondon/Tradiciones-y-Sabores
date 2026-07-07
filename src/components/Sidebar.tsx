@@ -9,11 +9,14 @@ import {
   BarChart2,
   Settings,
   LogOut,
+  X,
 } from 'lucide-react';
 
 interface SidebarProps {
   currentView: string;
   setView: (view: string) => void;
+  isOpen: boolean;
+  onClose: () => void;
 }
 
 const navItems = [
@@ -25,28 +28,40 @@ const navItems = [
   { id: 'reports',   label: 'Informes',     icon: BarChart2 },
 ];
 
-export default function Sidebar({ currentView, setView }: SidebarProps) {
+export default function Sidebar({ currentView, setView, isOpen, onClose }: SidebarProps) {
   return (
     <nav
       style={{ background: 'linear-gradient(180deg, #1a110d 0%, #211510 100%)' }}
-      className="h-screen w-64 fixed left-0 top-0 hidden md:flex flex-col p-5 z-40 border-r border-white/5"
+      className={`h-screen w-64 fixed left-0 top-0 flex flex-col p-5 z-40 border-r border-white/5 transition-transform duration-300 ease-in-out md:translate-x-0 ${
+        isOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}
     >
       {/* ── Logo ─────────────────────────────────────── */}
-      <div className="mb-7 flex items-center gap-3 px-1">
-        <div
-          style={{ background: 'linear-gradient(135deg, #e8601a, #c44d0e)' }}
-          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg"
+      <div className="mb-7 flex items-center justify-between px-1">
+        <div className="flex items-center gap-3">
+          <div
+            style={{ background: 'linear-gradient(135deg, #e8601a, #c44d0e)' }}
+            className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg"
+          >
+            <ChefHat size={21} color="#fff" />
+          </div>
+          <div>
+            <div className="text-[15px] font-black text-white leading-tight tracking-tight uppercase">
+              Restaurante Equis
+            </div>
+            <div className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mt-0.5">
+              Sistema de gestión
+            </div>
+          </div>
+        </div>
+
+        {/* Botón cerrar en móvil */}
+        <button
+          onClick={onClose}
+          className="md:hidden text-white/60 hover:text-white p-1 rounded-lg hover:bg-white/5 transition-colors"
         >
-          <ChefHat size={21} color="#fff" />
-        </div>
-        <div>
-          <div className="text-[15px] font-black text-white leading-tight tracking-tight uppercase">
-            Restaurante Equis
-          </div>
-          <div className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mt-0.5">
-            Sistema de gestión
-          </div>
-        </div>
+          <X size={20} />
+        </button>
       </div>
 
       {/* ── Botón CTA ────────────────────────────────── */}

@@ -107,7 +107,7 @@ export default function OrdersView() {
       </div>
 
       {/* Contadores por estado (actúan como filtros) */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {(['Recibido', 'Preparando', 'Listo'] as EstatusOrden[]).map((e) => {
           const borderColors: Record<EstatusOrden, string> = {
             Recibido: 'border-outline-variant',
@@ -241,52 +241,54 @@ export default function OrdersView() {
                       )}
                     </div>
 
-                    {/* Tabla de ítems */}
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="text-xs text-on-surface-variant uppercase border-b border-outline-variant">
-                          <th className="text-left pb-2">Ítem</th>
-                          <th className="text-center pb-2 w-16">Cant.</th>
-                          <th className="text-right pb-2 w-24">Precio U.</th>
-                          <th className="text-right pb-2 w-24">Subtotal</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {orden.items.map((item, i) => (
-                          <tr key={i} className="border-b border-outline-variant/40 last:border-0">
-                            <td className="py-2 font-bold">
-                              {item.nombre}
-                              {item.notas && (
-                                <span className="ml-2 text-xs text-error font-medium">
-                                  ({item.notas})
-                                </span>
-                              )}
+                    {/* Tabla de ítems con scroll horizontal en móviles */}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm min-w-[500px]">
+                        <thead>
+                          <tr className="text-xs text-on-surface-variant uppercase border-b border-outline-variant">
+                            <th className="text-left pb-2">Ítem</th>
+                            <th className="text-center pb-2 w-16">Cant.</th>
+                            <th className="text-right pb-2 w-24">Precio U.</th>
+                            <th className="text-right pb-2 w-24">Subtotal</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {orden.items.map((item, i) => (
+                            <tr key={i} className="border-b border-outline-variant/40 last:border-0">
+                              <td className="py-2 font-bold">
+                                {item.nombre}
+                                {item.notas && (
+                                  <span className="ml-2 text-xs text-error font-medium">
+                                    ({item.notas})
+                                  </span>
+                                )}
+                              </td>
+                              <td className="py-2 text-center text-on-surface-variant">{item.cantidad}</td>
+                              <td className="py-2 text-right font-mono text-on-surface-variant">
+                                ${item.precio_unitario.toFixed(2)}
+                              </td>
+                              <td className="py-2 text-right font-mono">
+                                ${(item.precio_unitario * item.cantidad).toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot className="border-t-2 border-outline-variant">
+                          <tr>
+                            <td colSpan={3} className="pt-2 text-right text-on-surface-variant text-xs uppercase font-bold">
+                              IVA (16%)
                             </td>
-                            <td className="py-2 text-center text-on-surface-variant">{item.cantidad}</td>
-                            <td className="py-2 text-right font-mono text-on-surface-variant">
-                              ${item.precio_unitario.toFixed(2)}
-                            </td>
-                            <td className="py-2 text-right font-mono">
-                              ${(item.precio_unitario * item.cantidad).toFixed(2)}
+                            <td className="pt-2 text-right font-mono">${orden.iva.toFixed(2)}</td>
+                          </tr>
+                          <tr>
+                            <td colSpan={3} className="text-right font-black uppercase text-base">Total</td>
+                            <td className="text-right font-mono font-black text-xl text-secondary-container">
+                              ${orden.total.toFixed(2)}
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                      <tfoot className="border-t-2 border-outline-variant">
-                        <tr>
-                          <td colSpan={3} className="pt-2 text-right text-on-surface-variant text-xs uppercase font-bold">
-                            IVA (16%)
-                          </td>
-                          <td className="pt-2 text-right font-mono">${orden.iva.toFixed(2)}</td>
-                        </tr>
-                        <tr>
-                          <td colSpan={3} className="text-right font-black uppercase text-base">Total</td>
-                          <td className="text-right font-mono font-black text-xl text-secondary-container">
-                            ${orden.total.toFixed(2)}
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
+                        </tfoot>
+                      </table>
+                    </div>
 
                     {/* Botón cancelar — solo si no está Listo */}
                     {orden.Estatus_Orden !== 'Listo' && (

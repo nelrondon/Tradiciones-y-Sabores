@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Bell, Search, ChefHat } from 'lucide-react';
+import { Bell, Search, ChefHat, Menu } from 'lucide-react';
 
 interface TopBarProps {
   currentView: string;
   setView: (view: string) => void;
+  onOpenSidebar: () => void;
 }
 
 const LABELS: Record<string, string> = {
@@ -15,7 +16,7 @@ const LABELS: Record<string, string> = {
   reports:   'Reportes y Datos',
 };
 
-export default function TopBar({ currentView, setView: _setView }: TopBarProps) {
+export default function TopBar({ currentView, setView: _setView, onOpenSidebar }: TopBarProps) {
   const [hora, setHora] = useState('');
 
   useEffect(() => {
@@ -36,6 +37,14 @@ export default function TopBar({ currentView, setView: _setView }: TopBarProps) 
 
       {/* ── Título de la vista actual ─────────────────────── */}
       <div className="flex items-center gap-3">
+        {/* Botón menú (hamburguesa) en móvil */}
+        <button
+          onClick={onOpenSidebar}
+          className="md:hidden text-on-surface-variant hover:text-on-surface p-1 rounded-lg hover:bg-surface-container transition-colors"
+        >
+          <Menu size={20} />
+        </button>
+
         <ChefHat size={18} className="text-secondary-container shrink-0" />
         <div className="hidden md:block h-4 w-px bg-outline-variant" />
         <h1 className="text-sm font-bold text-on-surface tracking-wide">

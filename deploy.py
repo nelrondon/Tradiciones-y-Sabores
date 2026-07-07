@@ -9,7 +9,7 @@ HOST     = "158.220.100.226"
 PORT     = 22
 USER     = "root"
 PASSWORD = "1415162013asd"
-REMOTE   = "/var/www/html"
+REMOTE   = "/var/www/restaurantequis"
 LOCAL    = os.path.join(os.path.dirname(__file__), "dist")
 
 def upload_dir(sftp, local_dir, remote_dir):
@@ -39,21 +39,18 @@ def main():
         print(f"❌ Error de conexión: {e}")
         sys.exit(1)
 
-    # Verificar qué hay actualmente en el servidor
-    print("📂 Contenido actual de /var/www/html/:")
-    _, stdout, _ = client.exec_command(f"ls -la {REMOTE}/")
-    print(stdout.read().decode())
+    # Limpiar assets viejos para evitar acumular compilaciones
+    print(f"🧹 Limpiando assets anteriores en {REMOTE}/assets/...")
+    client.exec_command(f"rm -rf {REMOTE}/assets/*")
+
+    # Asegurarse de que el directorio remoto exista
+    client.exec_command(f"mkdir -p {REMOTE}/assets")
 
     # Subir el dist/
     print(f"\n📤 Subiendo {LOCAL} → {REMOTE}/")
     sftp = client.open_sftp()
     upload_dir(sftp, LOCAL, REMOTE)
     sftp.close()
-
-    # Verificar la subida
-    print("\n📂 Contenido de /var/www/html/ después de la subida:")
-    _, stdout, _ = client.exec_command(f"ls -la {REMOTE}/")
-    print(stdout.read().decode())
 
     # Recargar Nginx por si acaso
     print("🔄 Recargando Nginx...")
@@ -63,8 +60,11 @@ def main():
     if out: print(f"   {out}")
     if err: print(f"   {err}")
 
+    # Forzar permisos correctos
+    client.exec_command(f"chmod -R 755 {REMOTE} && chown -R www-data:www-data {REMOTE}")
+
     client.close()
-    print("\n✅ Despliegue completado. Abre http://158.220.100.226/ y recarga con Ctrl+Shift+R")
+    print("\n✅ Despliegue completado. Abre http://restauranteequis.158.220.100.226.nip.io/ y recarga con Ctrl+Shift+R")
 
 if __name__ == "__main__":
     main()

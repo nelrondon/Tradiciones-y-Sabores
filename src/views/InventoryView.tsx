@@ -237,84 +237,86 @@ export default function InventoryView() {
 
       {/* Tabla */}
       <div className="bg-surface border border-outline-variant rounded-xl overflow-hidden shadow-sm">
-        <table className="w-full">
-          <thead>
-            <tr className="text-xs text-on-surface-variant uppercase bg-surface-container-highest border-b border-outline-variant">
-              <th className="text-left p-4">Producto / Ingrediente</th>
-              <th className="p-4">Stock</th>
-              <th className="p-4">Unidad</th>
-              <th className="p-4">Stock Mín.</th>
-              <th className="p-4">Costo Unit.</th>
-              <th className="p-4">Estado</th>
-              <th className="p-4 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan={7} className="p-10 text-center text-on-surface-variant">
-                  <Loader2 size={24} className="animate-spin inline mr-2" /> Cargando inventario...
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px]">
+            <thead>
+              <tr className="text-xs text-on-surface-variant uppercase bg-surface-container-highest border-b border-outline-variant">
+                <th className="text-left p-4">Producto / Ingrediente</th>
+                <th className="p-4">Stock</th>
+                <th className="p-4">Unidad</th>
+                <th className="p-4">Stock Mín.</th>
+                <th className="p-4">Costo Unit.</th>
+                <th className="p-4">Estado</th>
+                <th className="p-4 text-right">Acciones</th>
               </tr>
-            ) : items.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="p-10 text-center text-on-surface-variant">
-                  No hay ítems en el inventario. Agrega el primero.
-                </td>
-              </tr>
-            ) : (
-              items.map((item) => {
-                const bajo = item.stock <= item.stock_minimo;
-                return (
-                  <tr
-                    key={item.id_inventario}
-                    className={`border-b border-outline-variant/50 last:border-0 hover:bg-surface-container-low transition-colors fade-in-up ${bajo ? 'bg-error-container/10' : ''}`}
-                  >
-                    <td className="p-4 font-bold text-on-surface">{item.nombre}</td>
-                    <td className="p-4 text-center">
-                      <span className={`font-mono font-black text-xl ${bajo ? 'text-error' : 'text-primary'}`}>
-                        {item.stock}
-                      </span>
-                    </td>
-                    <td className="p-4 text-center text-on-surface-variant text-sm">{item.unidad}</td>
-                    <td className="p-4 text-center font-mono text-on-surface-variant">{item.stock_minimo}</td>
-                    <td className="p-4 font-mono">${item.precio_costo.toFixed(2)}</td>
-                    <td className="p-4">
-                      {bajo ? (
-                        <span className="inline-flex items-center gap-1 bg-error-container text-on-error-container text-xs font-bold px-2 py-1 rounded">
-                          <AlertTriangle size={12} /> Stock Bajo
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="p-10 text-center text-on-surface-variant">
+                    <Loader2 size={24} className="animate-spin inline mr-2" /> Cargando inventario...
+                  </td>
+                </tr>
+              ) : items.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-10 text-center text-on-surface-variant">
+                    No hay ítems en el inventario. Agrega el primero.
+                  </td>
+                </tr>
+              ) : (
+                items.map((item) => {
+                  const bajo = item.stock <= item.stock_minimo;
+                  return (
+                    <tr
+                      key={item.id_inventario}
+                      className={`border-b border-outline-variant/50 last:border-0 hover:bg-surface-container-low transition-colors fade-in-up ${bajo ? 'bg-error-container/10' : ''}`}
+                    >
+                      <td className="p-4 font-bold text-on-surface">{item.nombre}</td>
+                      <td className="p-4 text-center">
+                        <span className={`font-mono font-black text-xl ${bajo ? 'text-error' : 'text-primary'}`}>
+                          {item.stock}
                         </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-bold px-2 py-1 rounded border border-emerald-200">
-                          ✓ OK
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => abrirEditar(item)}
-                          className="text-on-surface-variant hover:text-secondary-container transition-colors p-1"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          onClick={() => eliminar(item.id_inventario)}
-                          disabled={eliminando === item.id_inventario}
-                          className="text-on-surface-variant hover:text-error transition-colors p-1 disabled:opacity-50"
-                        >
-                          {eliminando === item.id_inventario
-                            ? <Loader2 size={16} className="animate-spin" />
-                            : <Trash2 size={16} />}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
+                      </td>
+                      <td className="p-4 text-center text-on-surface-variant text-sm">{item.unidad}</td>
+                      <td className="p-4 text-center font-mono text-on-surface-variant">{item.stock_minimo}</td>
+                      <td className="p-4 font-mono">${item.precio_costo.toFixed(2)}</td>
+                      <td className="p-4">
+                        {bajo ? (
+                          <span className="inline-flex items-center gap-1 bg-error-container text-on-error-container text-xs font-bold px-2 py-1 rounded">
+                            <AlertTriangle size={12} /> Stock Bajo
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-bold px-2 py-1 rounded border border-emerald-200">
+                            ✓ OK
+                          </span>
+                        )}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => abrirEditar(item)}
+                            className="text-on-surface-variant hover:text-secondary-container transition-colors p-1"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button
+                            onClick={() => eliminar(item.id_inventario)}
+                            disabled={eliminando === item.id_inventario}
+                            className="text-on-surface-variant hover:text-error transition-colors p-1 disabled:opacity-50"
+                          >
+                            {eliminando === item.id_inventario
+                              ? <Loader2 size={16} className="animate-spin" />
+                              : <Trash2 size={16} />}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {showModal && (

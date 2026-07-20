@@ -3,7 +3,7 @@ routers/ordenes.py
 GET    /api/ordenes & /api/pedidos → obtener todas las órdenes / pedidos
 POST   /api/ordenes & /api/pedidos → crear pedido + cliente + detalle_pedido
 PUT    /api/ordenes/{num_ticket}    → actualizar estado_orden
-DELETE /api/ordenes/{num_ticket}    → cancelar orden
+DELETE /api/ordenes/{num_ticket}    → eliminar / cancelar orden
 """
 from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -15,7 +15,7 @@ from models import Pedido, DetallePedido, Cliente, Plato, EstadoOrdenEnum, TipoP
 from schemas import PedidoIn, PedidoOut, PedidoUpdateEstatus
 
 router = APIRouter(prefix="/api/ordenes", tags=["Órdenes / Pedidos"])
-router_pedidos = APIRouter(prefix="/api/pedidos", tags=["Pedidos"])
+router_pedidos = APIRouter(prefix="/api/pedidos", tags=["Pedidos (Alias)"])
 
 
 def format_pedido_response(p: Pedido) -> dict:
@@ -37,9 +37,7 @@ def format_pedido_response(p: Pedido) -> dict:
     iva = round(subtotal * 0.16, 2)
     total = round(subtotal + iva, 2)
 
-    # Estado estandarizado para la vista antigua o nueva
     estatus_str = p.estado_orden.value if hasattr(p.estado_orden, 'value') else str(p.estado_orden)
-    # Mapeo a mayúsculas inicial para compatibilidad si requiere
     estatus_cap = estatus_str.capitalize()
 
     return {
@@ -94,16 +92,11 @@ def get_orden_por_id(num_ticket: int, db: Session = Depends(get_db)):
 @router.post("", status_code=201)
 @router_pedidos.post("", status_code=201)
 def crear_orden(data: dict, db: Session = Depends(get_db)):
-    """
-    Crea un nuevo pedido. Maneja tanto el formato legacy como el relacional.
-    Garantiza que el cliente exista en la tabla 'cliente' y registra los ítems en 'detalle_pedido'.
-    """
     cedula = data.get("cedula_cliente") or data.get("cliente_cedula") or "V-00000000"
     nombre_cli = data.get("cliente_nombre") or data.get("nombre_cliente") or "Cliente Consumidor"
     telefono_cli = data.get("cliente_telefono") or data.get("telefono") or "0000000000"
     direccion_cli = data.get("direccion_envio") or data.get("direccion") or data.get("direccion_habitual")
 
-    # 1. Asegurar o crear cliente
     cliente = db.query(Cliente).filter(Cliente.cedula_cliente == cedula).first()
     if not cliente:
         cliente = Cliente(
@@ -115,7 +108,6 @@ def crear_orden(data: dict, db: Session = Depends(get_db)):
         db.add(cliente)
         db.flush()
 
-    # 2. Determinar tipo de pedido y estado
     tipo_str = data.get("tipo_pedido") or data.get("tipo") or "mesa"
     try:
         tipo_enum = TipoPedidoEnum(tipo_str.lower())
@@ -124,7 +116,6 @@ def crear_orden(data: dict, db: Session = Depends(get_db)):
 
     id_mesa = data.get("id_mesa") or data.get("mesa")
 
-    # 3. Crear cabecera de pedido
     pedido = Pedido(
         tipo_pedido=tipo_enum,
         estado_orden=EstadoOrdenEnum.recibido,
@@ -133,9 +124,8 @@ def crear_orden(data: dict, db: Session = Depends(get_db)):
         direccion_envio=direccion_cli if tipo_enum == TipoPedidoEnum.delivery else None
     )
     db.add(pedido)
-    db.flush() # Obtener num_ticket
+    db.flush()
 
-    # 4. Insertar detalles del pedido
     items_raw = data.get("items") or data.get("detalles") or []
     subtotal_acum = 0.0
 
@@ -143,7 +133,6 @@ def crear_orden(data: dict, db: Session = Depends(get_db)):
         id_plato = it.get("id_plato") or it.get("id_producto")
         cant = int(it.get("cantidad", 1))
         
-        # Buscar precio del plato
         plato = db.query(Plato).filter(Plato.id_plato == id_plato).first()
         precio_unit = float(plato.precio) if plato else float(it.get("precio_unitario", 0))
         sub = round(precio_unit * cant, 2)
@@ -157,7 +146,6 @@ def crear_orden(data: dict, db: Session = Depends(get_db)):
         )
         db.add(detalle)
 
-    # 5. Crear factura inicial en estado pendiente
     factura = Factura(
         num_ticket=pedido.num_ticket,
         subtotal=subtotal_acum,
@@ -169,7 +157,6 @@ def crear_orden(data: dict, db: Session = Depends(get_db)):
 
     db.commit()
     
-    # Recargar con relaciones
     pedido_full = db.query(Pedido).options(
         joinedload(Pedido.cliente),
         joinedload(Pedido.detalles).joinedload(DetallePedido.plato)
@@ -201,19 +188,16 @@ def update_estatus(num_ticket: int, data: dict, db: Session = Depends(get_db)):
     return {"status": "ok", "num_ticket": num_ticket}
 
 
-@router.delete("/{num_ticket}", status_code=204)
-@router_pedidos.delete("/{num_ticket}", status_code=204)
+@router.delete("/{num_ticket}")
+@router_pedidos.delete("/{num_ticket}")
 def cancelar_orden(num_ticket: int, db: Session = Depends(get_db)):
     pedido = db.query(Pedido).filter(Pedido.num_ticket == num_ticket).first()
     if not pedido:
-        raise HTTPException(status_code=404, detail="Orden no encontrada")
-    if pedido.estado_orden in [EstadoOrdenEnum.listo, EstadoOrdenEnum.entregado]:
-        raise HTTPException(
-            status_code=400,
-            detail="No se puede cancelar una orden lista o entregada"
-        )
+        raise HTTPException(status_code=404, detail="Orden / Pedido no encontrado")
     
+    # Eliminar en orden relacional (factura -> detalle_pedido -> pedido)
     db.query(Factura).filter(Factura.num_ticket == num_ticket).delete()
     db.query(DetallePedido).filter(DetallePedido.num_ticket == num_ticket).delete()
     db.delete(pedido)
     db.commit()
+    return {"status": "deleted", "num_ticket": num_ticket}

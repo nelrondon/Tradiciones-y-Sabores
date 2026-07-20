@@ -113,6 +113,8 @@ app = FastAPI(
     title="Restaurant Equis — API",
     description="Backend REST adaptado 100% al esquema de base de datos del equipo.",
     version="1.1.0",
+    docs_url="/docs",
+    openapi_url="/openapi.json",
     lifespan=lifespan,
 )
 

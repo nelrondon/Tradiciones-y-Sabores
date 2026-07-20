@@ -1,6 +1,6 @@
 """
 deploy_vps.py — Sube tanto el Frontend (dist/) como el Backend (backend/) al VPS Contabo
-Configura e inicia automáticamente el servicio systemd restaurant-equis-api
+Configura e inicia automáticamente el servicio systemd restaurant-equis-api y asegura el archivo .env
 """
 import os
 import sys
@@ -65,13 +65,14 @@ def main():
     client.exec_command(f"mkdir -p {REMOTE_BACKEND}")
     upload_dir(sftp, LOCAL_BACKEND, REMOTE_BACKEND)
     
-    # 3. Configurar entorno Python venv si no existe
+    # 3. Configurar entorno Python, .env y systemd
     print("\n--- Configurando Entorno Python / systemd ---")
     setup_cmds = (
         f"cd {REMOTE_BACKEND} && "
         "if [ ! -d 'venv' ]; then python3 -m venv venv; fi && "
         "venv/bin/pip install --upgrade pip setuptools -q && "
         "venv/bin/pip install -r requirements.txt psycopg2-binary -q && "
+        "if [ ! -f '.env' ]; then cp .env.example .env; fi && "
         "cp restaurant-equis-api.service /etc/systemd/system/restaurant-equis-api.service && "
         "chown -R www-data:www-data /opt/restaurant-equis && "
         "systemctl daemon-reload && "

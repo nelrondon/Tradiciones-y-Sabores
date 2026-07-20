@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   X,
+  Smartphone,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -21,6 +22,7 @@ interface SidebarProps {
 
 const navItems = [
   { id: 'pos',       label: 'Nuevo Pedido', icon: LayoutDashboard },
+  { id: 'customer',  label: 'Menú Cliente', icon: Smartphone },
   { id: 'orders',    label: 'Pedidos',      icon: ReceiptText },
   { id: 'kitchen',   label: 'Cocina',       icon: Utensils },
   { id: 'inventory', label: 'Inventario',   icon: Package },
@@ -76,7 +78,7 @@ export default function Sidebar({ currentView, setView, isOpen, onClose }: Sideb
 
       {/* ── Sección label ────────────────────────────── */}
       <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest px-2 mb-1.5">
-        Menú
+        Navegación
       </div>
 
       {/* ── Navegación ───────────────────────────────── */}

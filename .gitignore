@@ -8,3 +8,5 @@ coverage/
 !.env.example
 !.deploy.env.example
 .deploy.env
+__pycache__/
+*.pyc

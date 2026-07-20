@@ -1,11 +1,11 @@
 """
 models.py — Modelos ORM (SQLAlchemy)
-Representan las tablas de la base de datos PostgreSQL.
+Mapean exactamente las tablas PostgreSQL definidas por el equipo de BD (nelrondon/restaurant-bd-tdb).
 """
 from datetime import datetime
 from sqlalchemy import (
-    Column, Integer, String, Numeric, Boolean,
-    DateTime, Enum, ForeignKey, Text
+    Column, Integer, BigInteger, String, Numeric, Boolean,
+    DateTime, Date, Enum, ForeignKey, Text
 )
 from sqlalchemy.orm import relationship
 import enum
@@ -14,90 +14,152 @@ from database import Base
 
 
 # ─────────────────────────────────────────────────────────────
-# ENUMS
+# ENUMS DE BASE DE DATOS
 # ─────────────────────────────────────────────────────────────
 
-class EstatusOrdenEnum(str, enum.Enum):
-    Recibido  = "Recibido"
-    Preparando = "Preparando"
-    Listo     = "Listo"
+class EstadoMesaEnum(str, enum.Enum):
+    disponible = "disponible"
+    ocupada = "ocupada"
+    reservada = "reservada"
+    fuera_de_servicio = "fuera_de_servicio"
 
-class TipoOrdenEnum(str, enum.Enum):
-    mesa     = "mesa"
-    pickup   = "pickup"
+class TipoPedidoEnum(str, enum.Enum):
+    mesa = "mesa"
+    pickup = "pickup"
     delivery = "delivery"
 
+class EstadoOrdenEnum(str, enum.Enum):
+    recibido = "recibido"
+    preparando = "preparando"
+    listo = "listo"
+    entregado = "entregado"
+
+class CategoriaPlatoEnum(str, enum.Enum):
+    entrada = "entrada"
+    plato_principal = "plato_principal"
+    postre = "postre"
+    bebida = "bebida"
+    acompanante = "acompañante"
+
+class EstadoPagoEnum(str, enum.Enum):
+    pendiente = "pendiente"
+    pagado = "pagado"
+    anulado = "anulado"
+
 
 # ─────────────────────────────────────────────────────────────
-# TABLAS
+# TABLAS DE MESAS, PLATOS Y PEDIDOS
 # ─────────────────────────────────────────────────────────────
 
-class Producto(Base):
-    __tablename__ = "productos"
+class Mesa(Base):
+    __tablename__ = "mesa"
 
-    id_producto  = Column(Integer, primary_key=True, index=True)
-    nombre       = Column(String(150), nullable=False)
-    descripcion  = Column(Text, default="")
-    precio       = Column(Numeric(10, 2), nullable=False)
-    categoria    = Column(String(100), nullable=False)
-    imagen_url   = Column(String(300), nullable=True)
-    disponible   = Column(Boolean, default=True, nullable=False)
+    id_mesa   = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    capacidad = Column(Integer, nullable=False)
+    estado    = Column(Enum(EstadoMesaEnum, values_callable=lambda x: [e.value for e in x]), default=EstadoMesaEnum.disponible, nullable=False)
+    ubicacion = Column(String(100), nullable=True)
 
-    # Relación inversa
-    items = relationship("ItemPedido", back_populates="producto")
+
+class Plato(Base):
+    __tablename__ = "plato"
+
+    id_plato    = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    nombre      = Column(String(100), nullable=False)
+    descripcion = Column(String(255), nullable=True)
+    precio      = Column(Numeric(8, 2), nullable=False)
+    categoria   = Column(Enum(CategoriaPlatoEnum, values_callable=lambda x: [e.value for e in x]), nullable=False)
+
+
+class Cliente(Base):
+    __tablename__ = "cliente"
+
+    cedula_cliente     = Column(String(20), primary_key=True, index=True)
+    nombre             = Column(String(100), nullable=False)
+    telefono           = Column(String(20), nullable=False)
+    email              = Column(String(100), nullable=True)
+    direccion_habitual = Column(String(255), nullable=True)
+
+    pedidos = relationship("Pedido", back_populates="cliente")
 
 
 class Pedido(Base):
-    __tablename__ = "pedidos"
+    __tablename__ = "pedido"
 
-    id_pedido         = Column(Integer, primary_key=True, index=True)
-    hora_creacion     = Column(DateTime, default=datetime.utcnow, nullable=False)
-    cliente_nombre    = Column(String(150), nullable=False)
-    cliente_cedula    = Column(String(20), nullable=True)
-    cliente_telefono  = Column(String(20), nullable=True)
-    tipo              = Column(Enum(TipoOrdenEnum), nullable=False)
-    mesa              = Column(Integer, nullable=True)
-    direccion         = Column(String(300), nullable=True)
-    subtotal          = Column(Numeric(12, 2), nullable=False)
-    iva               = Column(Numeric(12, 2), nullable=False)
-    total             = Column(Numeric(12, 2), nullable=False)
-    Estatus_Orden     = Column(Enum(EstatusOrdenEnum), default=EstatusOrdenEnum.Recibido, nullable=False)
+    num_ticket      = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    tipo_pedido     = Column(Enum(TipoPedidoEnum, values_callable=lambda x: [e.value for e in x]), nullable=False)
+    estado_orden    = Column(Enum(EstadoOrdenEnum, values_callable=lambda x: [e.value for e in x]), default=EstadoOrdenEnum.recibido, nullable=False)
+    id_mesa         = Column(Integer, ForeignKey("mesa.id_mesa"), nullable=True)
+    cedula_cliente  = Column(String(20), ForeignKey("cliente.cedula_cliente"), nullable=False)
+    direccion_envio = Column(String(255), nullable=True)
+    fecha_creacion  = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-    items = relationship("ItemPedido", back_populates="pedido", cascade="all, delete-orphan")
+    mesa     = relationship("Mesa")
+    cliente  = relationship("Cliente", back_populates="pedidos")
+    detalles = relationship("DetallePedido", back_populates="pedido", cascade="all, delete-orphan")
+    factura  = relationship("Factura", back_populates="pedido", uselist=False)
 
 
-class ItemPedido(Base):
-    __tablename__ = "items_pedido"
+class DetallePedido(Base):
+    __tablename__ = "detalle_pedido"
 
-    id            = Column(Integer, primary_key=True, index=True)
-    id_pedido     = Column(Integer, ForeignKey("pedidos.id_pedido"), nullable=False)
-    id_producto   = Column(Integer, ForeignKey("productos.id_producto"), nullable=False)
-    nombre        = Column(String(150), nullable=False)   # snapshot del nombre al momento del pedido
-    cantidad      = Column(Integer, nullable=False)
-    precio_unitario = Column(Numeric(10, 2), nullable=False)
-    notas         = Column(Text, nullable=True)
+    num_ticket = Column(Integer, ForeignKey("pedido.num_ticket"), primary_key=True)
+    id_plato   = Column(Integer, ForeignKey("plato.id_plato"), primary_key=True)
+    cantidad   = Column(Integer, nullable=False)
+    subtotal   = Column(Numeric(8, 2), nullable=False)
 
-    pedido   = relationship("Pedido", back_populates="items")
-    producto = relationship("Producto", back_populates="items")
+    pedido = relationship("Pedido", back_populates="detalles")
+    plato  = relationship("Plato")
 
 
-class Inventario(Base):
-    __tablename__ = "inventario"
+class Factura(Base):
+    __tablename__ = "factura"
 
-    id_inventario = Column(Integer, primary_key=True, index=True)
-    nombre        = Column(String(150), nullable=False)
-    stock         = Column(Numeric(10, 3), nullable=False)
-    unidad        = Column(String(30), nullable=False)
-    precio_costo  = Column(Numeric(10, 2), nullable=False)
-    stock_minimo  = Column(Numeric(10, 3), nullable=False)
+    num_factura   = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    num_ticket    = Column(Integer, ForeignKey("pedido.num_ticket"), unique=True, nullable=False)
+    fecha_emision = Column(DateTime, default=datetime.utcnow, nullable=False)
+    subtotal      = Column(Numeric(8, 2), nullable=False)
+    impuesto      = Column(Numeric(8, 2), default=0, nullable=False)
+    total         = Column(Numeric(8, 2), nullable=False)
+    estado_pago   = Column(Enum(EstadoPagoEnum, values_callable=lambda x: [e.value for e in x]), default=EstadoPagoEnum.pendiente, nullable=False)
+    metodo_pago   = Column(String(30), nullable=True)
+
+    pedido = relationship("Pedido", back_populates="factura")
+
+
+# ─────────────────────────────────────────────────────────────
+# TABLAS DEL ESQUEMA INVENTARIO
+# ─────────────────────────────────────────────────────────────
+
+class CategoriaInsumo(Base):
+    __tablename__ = "Categoria"
+    __table_args__ = {"schema": "Inventario"}
+
+    ID_Categoria     = Column(BigInteger, primary_key=True, autoincrement=True)
+    Nombre_Categoria = Column(String(100), unique=True, nullable=False)
+
+
+class Insumo(Base):
+    __tablename__ = "Insumos"
+    __table_args__ = {"schema": "Inventario"}
+
+    ID_Insumos     = Column(BigInteger, primary_key=True, autoincrement=True)
+    Nombre_Insumo  = Column(String(100), unique=True, nullable=False)
+    Unidad_Medida  = Column(String(20), nullable=False)
+    Stock_Actual   = Column(Numeric(12, 4), default=0, nullable=False)
+    Stock_Minimo   = Column(Numeric(12, 4), default=0, nullable=False)
+    Punto_Reorden  = Column(Numeric(12, 4), default=0, nullable=False)
+    FK_IDCategoria = Column(BigInteger, ForeignKey("Inventario.Categoria.ID_Categoria"), nullable=True)
 
 
 class Proveedor(Base):
-    __tablename__ = "proveedores"
+    __tablename__ = "Proveedores"
+    __table_args__ = {"schema": "Inventario"}
 
-    id_proveedor = Column(Integer, primary_key=True, index=True)
-    nombre       = Column(String(150), nullable=False)
-    rif          = Column(String(20), nullable=False)
-    contacto     = Column(String(100), nullable=False)
-    telefono     = Column(String(20), nullable=False)
-    email        = Column(String(150), nullable=True)
+    ID_Proveedor       = Column(BigInteger, primary_key=True, autoincrement=True)
+    Nombre_Empresa     = Column(String(150), nullable=False)
+    Identificacion_RIF = Column("Identificación_RIF", String(30), unique=True, nullable=False)
+    Ciudad             = Column(String(100), nullable=False)
+    Telefono_Empresa   = Column(String(30), nullable=False)
+    Email_Empresa      = Column(String(100), unique=True, nullable=False)
+    Direccion          = Column(String(255), nullable=False)
+    Nombre_Encargado   = Column(String(100), nullable=False)

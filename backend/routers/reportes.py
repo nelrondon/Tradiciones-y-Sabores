@@ -7,17 +7,17 @@ from datetime import datetime, timedelta
 from typing import List, Optional
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from database import get_db
-from models import Pedido, EstatusOrdenEnum
-from schemas import ResumenReporte, OrdenOut
+from models import Pedido, Factura, DetallePedido, EstadoOrdenEnum
+from schemas import ResumenReporte
+from routers.ordenes import format_pedido_response
 
 router = APIRouter(prefix="/api/reportes", tags=["Reportes"])
 
 
 def _periodo_range(periodo: Optional[str]):
-    """Devuelve (inicio, fin) de fechas según el parámetro periodo."""
     ahora = datetime.utcnow()
     if periodo == "semana":
         inicio = ahora - timedelta(days=7)
@@ -26,7 +26,7 @@ def _periodo_range(periodo: Optional[str]):
     elif periodo == "hoy":
         inicio = ahora.replace(hour=0, minute=0, second=0, microsecond=0)
     else:
-        inicio = ahora - timedelta(days=30)   # default: último mes
+        inicio = ahora - timedelta(days=30)
     return inicio, ahora
 
 
@@ -37,25 +37,28 @@ def get_resumen(db: Session = Depends(get_db)):
     inicio_anterior = ahora - timedelta(days=60)
 
     # Período actual
-    q_actual = db.query(Pedido).filter(Pedido.hora_creacion >= inicio_actual)
+    q_actual = db.query(Pedido).filter(Pedido.fecha_creacion >= inicio_actual)
     pedidos_actuales = q_actual.count()
+    
     ingresos_actuales = float(
-        db.query(func.sum(Pedido.total))
-        .filter(Pedido.hora_creacion >= inicio_actual)
+        db.query(func.sum(Factura.total))
+        .join(Pedido, Factura.num_ticket == Pedido.num_ticket)
+        .filter(Pedido.fecha_creacion >= inicio_actual)
         .scalar() or 0
     )
 
-    # Período anterior (para calcular % cambio)
+    # Período anterior
     q_anterior = db.query(Pedido).filter(
-        Pedido.hora_creacion >= inicio_anterior,
-        Pedido.hora_creacion < inicio_actual,
+        Pedido.fecha_creacion >= inicio_anterior,
+        Pedido.fecha_creacion < inicio_actual,
     )
     pedidos_anteriores = q_anterior.count()
     ingresos_anteriores = float(
-        db.query(func.sum(Pedido.total))
+        db.query(func.sum(Factura.total))
+        .join(Pedido, Factura.num_ticket == Pedido.num_ticket)
         .filter(
-            Pedido.hora_creacion >= inicio_anterior,
-            Pedido.hora_creacion < inicio_actual,
+            Pedido.fecha_creacion >= inicio_anterior,
+            Pedido.fecha_creacion < inicio_actual,
         )
         .scalar() or 0
     )
@@ -65,15 +68,14 @@ def get_resumen(db: Session = Depends(get_db)):
             return 100.0 if actual > 0 else 0.0
         return round((actual - anterior) / anterior * 100, 1)
 
-    # Tiempo promedio de atención (de Recibido a Listo) — aproximación con datos disponibles
-    # Se calcula como tiempo desde hora_creacion hasta "ahora" para órdenes Listas del período actual
     listos = db.query(Pedido).filter(
-        Pedido.hora_creacion >= inicio_actual,
-        Pedido.Estatus_Orden == EstatusOrdenEnum.Listo,
+        Pedido.fecha_creacion >= inicio_actual,
+        Pedido.estado_orden.in_([EstadoOrdenEnum.listo, EstadoOrdenEnum.entregado]),
     ).all()
+    
     if listos:
         tiempo_promedio = sum(
-            (ahora - p.hora_creacion).total_seconds() for p in listos
+            (ahora - p.fecha_creacion).total_seconds() for p in listos
         ) / len(listos)
     else:
         tiempo_promedio = 0.0
@@ -87,22 +89,25 @@ def get_resumen(db: Session = Depends(get_db)):
     )
 
 
-@router.get("/pedidos", response_model=List[OrdenOut])
+@router.get("/pedidos")
 def get_pedidos_reporte(
     estado: Optional[str] = Query(None),
     periodo: Optional[str] = Query(None),
     db: Session = Depends(get_db),
 ):
     inicio, fin = _periodo_range(periodo)
-    query = db.query(Pedido).filter(
-        Pedido.hora_creacion >= inicio,
-        Pedido.hora_creacion <= fin,
+    query = db.query(Pedido).options(
+        joinedload(Pedido.cliente),
+        joinedload(Pedido.detalles).joinedload(DetallePedido.plato)
+    ).filter(
+        Pedido.fecha_creacion >= inicio,
+        Pedido.fecha_creacion <= fin,
     )
+    
     if estado and estado != "Todos":
-        try:
-            estatus_enum = EstatusOrdenEnum(estado)
-            query = query.filter(Pedido.Estatus_Orden == estatus_enum)
-        except ValueError:
-            pass  # estado inválido → ignorar filtro
+        s = estado.lower()
+        if s in ["recibido", "preparando", "listo", "entregado"]:
+            query = query.filter(Pedido.estado_orden == s)
 
-    return query.order_by(Pedido.hora_creacion.desc()).all()
+    pedidos = query.order_by(Pedido.num_ticket.desc()).all()
+    return [format_pedido_response(p) for p in pedidos]

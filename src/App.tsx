@@ -7,9 +7,10 @@ import ReportsView from './views/ReportsView';
 import InventoryView from './views/InventoryView';
 import SuppliersView from './views/SuppliersView';
 import OrdersView from './views/OrdersView';
+import CustomerMenuView from './views/CustomerMenuView';
 import { ToastProvider } from './components/Toast';
 
-const VIEWS = ['pos', 'orders', 'kitchen', 'inventory', 'suppliers', 'reports'];
+const VIEWS = ['pos', 'customer', 'orders', 'kitchen', 'inventory', 'suppliers', 'reports'];
 
 export default function App() {
   const [view, setView] = useState('pos');
@@ -35,10 +36,13 @@ export default function App() {
         )}
 
         <div className="flex-1 flex flex-col md:ml-64 h-screen relative overflow-hidden">
-          <TopBar currentView={view} setView={navigateTo} onOpenSidebar={() => setSidebarOpen(true)} />
+          {view !== 'customer' && (
+            <TopBar currentView={view} setView={navigateTo} onOpenSidebar={() => setSidebarOpen(true)} />
+          )}
 
           <main className="flex-1 overflow-y-auto">
             {view === 'pos'       && <PosView />}
+            {view === 'customer'  && <CustomerMenuView />}
             {view === 'orders'    && <OrdersView />}
             {view === 'kitchen'   && <KitchenView />}
             {view === 'inventory' && <InventoryView />}

@@ -1,147 +1,188 @@
 """
 schemas.py — Pydantic schemas
 Validan los datos de entrada y dan forma a las respuestas JSON.
-Deben coincidir 1:1 con los tipos definidos en src/api/index.ts
+Alineados con el esquema SQL del equipo de BD (nelrondon/restaurant-bd-tdb).
 """
 from datetime import datetime
 from typing import List, Optional
 from pydantic import BaseModel, ConfigDict
-from models import EstatusOrdenEnum, TipoOrdenEnum
-
+from models import (
+    EstadoMesaEnum, TipoPedidoEnum, EstadoOrdenEnum,
+    CategoriaPlatoEnum, EstadoPagoEnum
+)
 
 # ─────────────────────────────────────────────────────────────
-# PRODUCTO
+# MESA
 # ─────────────────────────────────────────────────────────────
 
-class ProductoOut(BaseModel):
+class MesaOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id_producto: int
+    id_mesa: int
+    capacidad: int
+    estado: EstadoMesaEnum
+    ubicacion: Optional[str] = None
+
+class MesaIn(BaseModel):
+    capacidad: int
+    estado: Optional[EstadoMesaEnum] = EstadoMesaEnum.disponible
+    ubicacion: Optional[str] = None
+
+
+# ─────────────────────────────────────────────────────────────
+# PLATO / PRODUCTO
+# ─────────────────────────────────────────────────────────────
+
+class PlatoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id_plato: int
     nombre: str
-    descripcion: str
+    descripcion: Optional[str] = None
     precio: float
-    categoria: str
-    imagen_url: Optional[str] = None
-    disponible: bool
+    categoria: CategoriaPlatoEnum
 
-
-# ─────────────────────────────────────────────────────────────
-# ÓRDENES
-# ─────────────────────────────────────────────────────────────
-
-class ItemOrdenIn(BaseModel):
-    id_producto: int
+class PlatoIn(BaseModel):
     nombre: str
-    cantidad: int
-    precio_unitario: float
-    notas: Optional[str] = None
+    descripcion: Optional[str] = None
+    precio: float
+    categoria: CategoriaPlatoEnum
 
 
-class ItemOrdenOut(BaseModel):
+# ─────────────────────────────────────────────────────────────
+# CLIENTE
+# ─────────────────────────────────────────────────────────────
+
+class ClienteOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id_producto: int
+    cedula_cliente: str
     nombre: str
-    cantidad: int
-    precio_unitario: float
-    notas: Optional[str] = None
-
-
-class OrdenIn(BaseModel):
-    cliente_nombre: str
-    cliente_cedula: Optional[str] = None
-    cliente_telefono: Optional[str] = None
-    tipo: TipoOrdenEnum
-    mesa: Optional[int] = None
-    direccion: Optional[str] = None
-    items: List[ItemOrdenIn]
-    subtotal: float
-    iva: float
-    total: float
-
-
-class OrdenOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id_pedido: int
-    hora_creacion: datetime
-    cliente_nombre: str
-    cliente_cedula: Optional[str] = None
-    cliente_telefono: Optional[str] = None
-    tipo: TipoOrdenEnum
-    mesa: Optional[int] = None
-    direccion: Optional[str] = None
-    items: List[ItemOrdenOut]
-    subtotal: float
-    iva: float
-    total: float
-    Estatus_Orden: EstatusOrdenEnum
-
-
-class OrdenUpdateEstatus(BaseModel):
-    Estatus_Orden: EstatusOrdenEnum
-
-
-# ─────────────────────────────────────────────────────────────
-# INVENTARIO
-# ─────────────────────────────────────────────────────────────
-
-class ItemInventarioIn(BaseModel):
-    nombre: str
-    stock: float
-    unidad: str
-    precio_costo: float
-    stock_minimo: float
-
-
-class ItemInventarioOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id_inventario: int
-    nombre: str
-    stock: float
-    unidad: str
-    precio_costo: float
-    stock_minimo: float
-
-
-class ItemInventarioUpdate(BaseModel):
-    nombre: Optional[str] = None
-    stock: Optional[float] = None
-    unidad: Optional[str] = None
-    precio_costo: Optional[float] = None
-    stock_minimo: Optional[float] = None
-
-
-# ─────────────────────────────────────────────────────────────
-# PROVEEDORES
-# ─────────────────────────────────────────────────────────────
-
-class ProveedorIn(BaseModel):
-    nombre: str
-    rif: str
-    contacto: str
     telefono: str
     email: Optional[str] = None
+    direccion_habitual: Optional[str] = None
 
+class ClienteIn(BaseModel):
+    cedula_cliente: str
+    nombre: str
+    telefono: str
+    email: Optional[str] = None
+    direccion_habitual: Optional[str] = None
+
+
+# ─────────────────────────────────────────────────────────────
+# PEDIDO Y DETALLE PEDIDO
+# ─────────────────────────────────────────────────────────────
+
+class DetallePedidoIn(BaseModel):
+    id_plato: int
+    cantidad: int
+    subtotal: float
+
+class DetallePedidoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    num_ticket: int
+    id_plato: int
+    cantidad: int
+    subtotal: float
+    plato: Optional[PlatoOut] = None
+
+class PedidoIn(BaseModel):
+    tipo_pedido: TipoPedidoEnum
+    estado_orden: Optional[EstadoOrdenEnum] = EstadoOrdenEnum.recibido
+    id_mesa: Optional[int] = None
+    cedula_cliente: str
+    cliente_nombre: Optional[str] = None   # Auxiliar para registrar cliente si no existe
+    cliente_telefono: Optional[str] = None # Auxiliar para registrar cliente si no existe
+    direccion_envio: Optional[str] = None
+    detalles: List[DetallePedidoIn]
+
+class PedidoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    num_ticket: int
+    tipo_pedido: TipoPedidoEnum
+    estado_orden: EstadoOrdenEnum
+    id_mesa: Optional[int] = None
+    cedula_cliente: str
+    direccion_envio: Optional[str] = None
+    fecha_creacion: datetime
+    cliente: Optional[ClienteOut] = None
+    detalles: List[DetallePedidoOut] = []
+
+class PedidoUpdateEstatus(BaseModel):
+    estado_orden: EstadoOrdenEnum
+
+
+# ─────────────────────────────────────────────────────────────
+# FACTURA
+# ─────────────────────────────────────────────────────────────
+
+class FacturaOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    num_factura: int
+    num_ticket: int
+    fecha_emision: datetime
+    subtotal: float
+    impuesto: float
+    total: float
+    estado_pago: EstadoPagoEnum
+    metodo_pago: Optional[str] = None
+
+class FacturaIn(BaseModel):
+    num_ticket: int
+    subtotal: float
+    impuesto: Optional[float] = 0
+    total: float
+    estado_pago: Optional[EstadoPagoEnum] = EstadoPagoEnum.pendiente
+    metodo_pago: Optional[str] = None
+
+
+# ─────────────────────────────────────────────────────────────
+# INVENTARIO Y PROVEEDORES
+# ─────────────────────────────────────────────────────────────
+
+class InsumoIn(BaseModel):
+    Nombre_Insumo: str
+    Unidad_Medida: str
+    Stock_Actual: float = 0
+    Stock_Minimo: float = 0
+    Punto_Reorden: float = 0
+    FK_IDCategoria: Optional[int] = None
+
+class InsumoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    ID_Insumos: int
+    Nombre_Insumo: str
+    Unidad_Medida: str
+    Stock_Actual: float
+    Stock_Minimo: float
+    Punto_Reorden: float
+    FK_IDCategoria: Optional[int] = None
+
+class ProveedorIn(BaseModel):
+    Nombre_Empresa: str
+    Identificacion_RIF: str
+    Ciudad: str
+    Telefono_Empresa: str
+    Email_Empresa: str
+    Direccion: str
+    Nombre_Encargado: str
 
 class ProveedorOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id_proveedor: int
-    nombre: str
-    rif: str
-    contacto: str
-    telefono: str
-    email: Optional[str] = None
-
-
-class ProveedorUpdate(BaseModel):
-    nombre: Optional[str] = None
-    rif: Optional[str] = None
-    contacto: Optional[str] = None
-    telefono: Optional[str] = None
-    email: Optional[str] = None
+    ID_Proveedor: int
+    Nombre_Empresa: str
+    Identificacion_RIF: str
+    Ciudad: str
+    Telefono_Empresa: str
+    Email_Empresa: str
+    Direccion: str
+    Nombre_Encargado: str
 
 
 # ─────────────────────────────────────────────────────────────

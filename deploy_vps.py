@@ -1,11 +1,11 @@
 """
 deploy_vps.py — Sube tanto el Frontend (dist/) como el Backend (backend/) al VPS Contabo
+Configura e inicia automáticamente el servicio systemd restaurant-equis-api
 """
 import os
 import sys
 import paramiko
 
-# Configurar encoding UTF-8 en stdout
 sys.stdout.reconfigure(encoding='utf-8')
 
 HOST     = "158.220.100.226"
@@ -23,7 +23,7 @@ LOCAL_BACKEND   = os.path.join(os.path.dirname(__file__), "backend")
 def upload_dir(sftp, local_dir, remote_dir):
     """Sube recursivamente un directorio local al servidor."""
     for entry in os.listdir(local_dir):
-        if entry in ['__pycache__', '.git', 'node_modules', '.venv']:
+        if entry in ['__pycache__', '.git', 'node_modules', '.venv', 'venv']:
             continue
         local_path  = os.path.join(local_dir, entry)
         remote_path = remote_dir + "/" + entry
@@ -64,22 +64,37 @@ def main():
     print("\n--- Subiendo Backend (backend/) ---")
     client.exec_command(f"mkdir -p {REMOTE_BACKEND}")
     upload_dir(sftp, LOCAL_BACKEND, REMOTE_BACKEND)
-    print("[OK] Backend subido.")
-
-    # 3. Reiniciar servicio backend y recargar Nginx
-    print("\n--- Reiniciando servicios en VPS ---")
-    stdin, stdout, stderr = client.exec_command(
-        "systemctl restart restaurant-equis-api || systemctl restart fastapi || true; "
-        "systemctl reload nginx; "
-        "systemctl status restaurant-equis-api --no-pager -n 5"
+    
+    # 3. Configurar entorno Python venv si no existe
+    print("\n--- Configurando Entorno Python / systemd ---")
+    setup_cmds = (
+        f"cd {REMOTE_BACKEND} && "
+        "if [ ! -d 'venv' ]; then python3 -m venv venv; fi && "
+        "venv/bin/pip install --upgrade pip setuptools -q && "
+        "venv/bin/pip install -r requirements.txt psycopg2-binary -q && "
+        "cp restaurant-equis-api.service /etc/systemd/system/restaurant-equis-api.service && "
+        "chown -R www-data:www-data /opt/restaurant-equis && "
+        "systemctl daemon-reload && "
+        "systemctl enable restaurant-equis-api && "
+        "systemctl restart restaurant-equis-api && "
+        "systemctl reload nginx"
     )
-    print(stdout.read().decode('utf-8', errors='ignore'))
-    print(stderr.read().decode('utf-8', errors='ignore'))
+    stdin, stdout, stderr = client.exec_command(setup_cmds)
+    out_text = stdout.read().decode('utf-8', errors='ignore')
+    err_text = stderr.read().decode('utf-8', errors='ignore')
+    if out_text: print(out_text)
+    if err_text: print(err_text)
+
+    # Verificación del estado del servicio
+    stdin, stdout, stderr = client.exec_command("systemctl status restaurant-equis-api --no-pager -n 5")
+    status_out = stdout.read().decode('utf-8', errors='ignore')
+    print("Estado del servicio Backend:")
+    print(status_out)
 
     sftp.close()
     client.close()
     print("\n==================================================")
-    print("¡DESPLIEGUE EXITOSO EN CONTABO VPS!")
+    print("¡DESPLIEGUE COMPLETO Y SERVICIOS ACTIVOS EN CONTABO VPS!")
     print("URL Frontend: http://restauranteequis.158.220.100.226.nip.io")
     print("URL API Swagger: http://restauranteequis.158.220.100.226.nip.io/api/docs")
     print("==================================================")

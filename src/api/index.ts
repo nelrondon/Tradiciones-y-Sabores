@@ -3,7 +3,7 @@
  * Conecta el frontend React con la API FastAPI respaldada por PostgreSQL.
  */
 
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:5000';
+const BASE = import.meta.env.VITE_API_URL || '';
 const HEADERS = { 'Content-Type': 'application/json' };
 
 function check(r: Response, msg: string): Response {

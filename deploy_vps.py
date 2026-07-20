@@ -1,6 +1,6 @@
 """
 deploy_vps.py — Sube tanto el Frontend (dist/) como el Backend (backend/) al VPS Contabo
-Configura e inicia automáticamente el servicio systemd restaurant-equis-api y asegura el archivo .env
+Configura e inicia automáticamente el servicio systemd y Nginx.
 """
 import os
 import sys
@@ -18,6 +18,7 @@ REMOTE_BACKEND  = "/opt/restaurant-equis/backend"
 
 LOCAL_FRONTEND  = os.path.join(os.path.dirname(__file__), "dist")
 LOCAL_BACKEND   = os.path.join(os.path.dirname(__file__), "backend")
+LOCAL_NGINX_CONF = os.path.join(os.path.dirname(__file__), "nginx.conf")
 
 
 def upload_dir(sftp, local_dir, remote_dir):
@@ -64,9 +65,13 @@ def main():
     print("\n--- Subiendo Backend (backend/) ---")
     client.exec_command(f"mkdir -p {REMOTE_BACKEND}")
     upload_dir(sftp, LOCAL_BACKEND, REMOTE_BACKEND)
+
+    # 3. Subir Nginx Conf
+    print("\n--- Subiendo Nginx Conf ---")
+    sftp.put(LOCAL_NGINX_CONF, "/etc/nginx/sites-available/restaurant-equis")
     
-    # 3. Configurar entorno Python, .env y systemd
-    print("\n--- Configurando Entorno Python / systemd ---")
+    # 4. Configurar entorno Python, .env, systemd y Nginx exclusivo
+    print("\n--- Aplicando Configuración y Reiniciando Servicios ---")
     setup_cmds = (
         f"cd {REMOTE_BACKEND} && "
         "if [ ! -d 'venv' ]; then python3 -m venv venv; fi && "
@@ -74,11 +79,14 @@ def main():
         "venv/bin/pip install -r requirements.txt psycopg2-binary -q && "
         "if [ ! -f '.env' ]; then cp .env.example .env; fi && "
         "cp restaurant-equis-api.service /etc/systemd/system/restaurant-equis-api.service && "
+        "rm -f /etc/nginx/sites-enabled/* && "
+        "ln -sf /etc/nginx/sites-available/restaurant-equis /etc/nginx/sites-enabled/restaurant-equis && "
         "chown -R www-data:www-data /opt/restaurant-equis && "
         "systemctl daemon-reload && "
         "systemctl enable restaurant-equis-api && "
         "systemctl restart restaurant-equis-api && "
-        "systemctl reload nginx"
+        "sleep 3 && "
+        "systemctl restart nginx"
     )
     stdin, stdout, stderr = client.exec_command(setup_cmds)
     out_text = stdout.read().decode('utf-8', errors='ignore')
@@ -86,11 +94,14 @@ def main():
     if out_text: print(out_text)
     if err_text: print(err_text)
 
-    # Verificación del estado del servicio
-    stdin, stdout, stderr = client.exec_command("systemctl status restaurant-equis-api --no-pager -n 5")
-    status_out = stdout.read().decode('utf-8', errors='ignore')
-    print("Estado del servicio Backend:")
-    print(status_out)
+    # Probar endpoint API local y público
+    stdin, stdout, stderr = client.exec_command("curl -s http://127.0.0.1:5000/api/")
+    print("\nRespuesta API Backend Local (127.0.0.1:5000/api/):")
+    print(stdout.read().decode('utf-8', errors='ignore'))
+
+    stdin, stdout, stderr = client.exec_command("curl -s -H 'Host: restauranteequis.158.220.100.226.nip.io' http://127.0.0.1/api/")
+    print("\nRespuesta API Nginx Proxy (127.0.0.1/api/):")
+    print(stdout.read().decode('utf-8', errors='ignore'))
 
     sftp.close()
     client.close()

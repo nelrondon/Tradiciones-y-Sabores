@@ -35,23 +35,26 @@ def seed_initial_data():
                 Plato(nombre="Jugo Natural de Parcha", descripcion="Jugo natural recién exprimido", precio=3.00, categoria=CategoriaPlatoEnum.bebida),
             ]
             db.add_all(platos_seed)
+            db.commit()
             print("🌱 Platos de prueba creados.")
 
         # 2. Sembrar Mesas
         if db.query(Mesa).count() == 0:
             mesas_seed = [
-                Mesa(id_mesa=1, capacidad=2, estado=EstadoMesaEnum.disponible, ubicacion="Terraza - M1"),
-                Mesa(id_mesa=2, capacidad=4, estado=EstadoMesaEnum.disponible, ubicacion="Terraza - M2"),
-                Mesa(id_mesa=3, capacidad=4, estado=EstadoMesaEnum.disponible, ubicacion="Salón Principal - M3"),
-                Mesa(id_mesa=4, capacidad=6, estado=EstadoMesaEnum.disponible, ubicacion="Salón Principal - M4"),
-                Mesa(id_mesa=5, capacidad=8, estado=EstadoMesaEnum.disponible, ubicacion="VIP - M5"),
+                Mesa(capacidad=2, estado=EstadoMesaEnum.disponible, ubicacion="Terraza - M1"),
+                Mesa(capacidad=4, estado=EstadoMesaEnum.disponible, ubicacion="Terraza - M2"),
+                Mesa(capacidad=4, estado=EstadoMesaEnum.disponible, ubicacion="Salón Principal - M3"),
+                Mesa(capacidad=6, estado=EstadoMesaEnum.disponible, ubicacion="Salón Principal - M4"),
+                Mesa(capacidad=8, estado=EstadoMesaEnum.disponible, ubicacion="VIP - M5"),
             ]
             db.add_all(mesas_seed)
+            db.commit()
             print("🌱 Mesas de prueba creadas.")
 
         # 3. Sembrar Cliente General
         if db.query(Cliente).count() == 0:
             db.add(Cliente(cedula_cliente="V-00000000", nombre="Cliente General / Consumidor", telefono="04140000000", email="cliente@equis.com", direccion_habitual="Local"))
+            db.commit()
             print("🌱 Cliente general creado.")
 
         # 4. Sembrar Insumos
@@ -61,22 +64,23 @@ def seed_initial_data():
                 Insumo(Nombre_Insumo="Queso Cheddar en Lonjas", Unidad_Medida="Paquete", Stock_Actual=15.0, Stock_Minimo=3.0, Punto_Reorden=5.0),
                 Insumo(Nombre_Insumo="Papas Congeladas", Unidad_Medida="Kg", Stock_Actual=40.0, Stock_Minimo=10.0, Punto_Reorden=15.0),
             ])
+            db.commit()
             print("🌱 Insumos iniciales creados.")
 
         # 5. Sembrar Proveedores
         if db.query(Proveedor).count() == 0:
             db.add(Proveedor(
                 Nombre_Empresa="Distribuidora Alimentos Express C.A.",
-                Identificación_RIF="J-30987654-1",
+                Identificacion_RIF="J-30987654-1",
                 Ciudad="Caracas",
                 Telefono_Empresa="0212-5551234",
                 Email_Empresa="ventas@alimentosexpress.com",
                 Direccion="Av. Principal de Los Ruices",
                 Nombre_Encargado="Carlos Mendoza"
             ))
+            db.commit()
             print("🌱 Proveedor inicial creado.")
 
-        db.commit()
     except Exception as e:
         db.rollback()
         print(f"⚠️ Nota en Seed inicial: {e}")
@@ -88,14 +92,19 @@ def seed_initial_data():
 async def lifespan(app: FastAPI):
     # Asegurar schema Inventario si se usa PostgreSQL
     try:
-        with engine.connect() as conn:
-            conn.execute(text('CREATE SCHEMA IF NOT EXISTS "Inventario";'))
-            conn.commit()
+        if engine.dialect.name == "postgresql":
+            with engine.connect() as conn:
+                conn.execute(text('CREATE SCHEMA IF NOT EXISTS "Inventario";'))
+                conn.commit()
     except Exception as e:
         print(f"Nota en creación de esquema: {e}")
 
-    Base.metadata.create_all(bind=engine)
-    print("✅ Tablas de base de datos creadas/verificadas.")
+    try:
+        Base.metadata.create_all(bind=engine, checkfirst=True)
+        print("✅ Tablas de base de datos creadas/verificadas.")
+    except Exception as e:
+        print(f"Nota en create_all (las tablas/tipos ya existen): {e}")
+
     seed_initial_data()
     yield
 
@@ -112,13 +121,13 @@ origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Permitir peticiones para desarrollo y demo
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Registrar routers (con soporte para rutas legacy e integradas)
+# Registrar routers
 app.include_router(ordenes.router)
 app.include_router(ordenes.router_pedidos)
 app.include_router(productos.router)

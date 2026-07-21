@@ -1,0 +1,25 @@
+{
+  "services": {
+    "backend": {
+      "root": "backend/",
+      "entrypoint": "main.py"
+    },
+    "interfaz": {
+      "root": "./"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/(.*)",
+      "destination": {
+        "service": "backend"
+      }
+    },
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "interfaz"
+      }
+    }
+  ]
+}

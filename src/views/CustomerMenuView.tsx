@@ -22,7 +22,11 @@ interface CartItem {
   notas?: string;
 }
 
-export default function CustomerMenuView() {
+interface CustomerMenuViewProps {
+  onBack?: () => void;
+}
+
+export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
   const toast = useToast();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -180,6 +184,16 @@ export default function CustomerMenuView() {
         <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
         <div className="relative max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="text-center md:text-left">
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="inline-flex items-center gap-1.5 text-xs font-bold bg-white/15 hover:bg-white/25 text-white px-3 py-1.5 rounded-xl mb-3 border border-white/10 transition cursor-pointer active:scale-95"
+              >
+                <ArrowLeft className="w-3.5 h-3.5" />
+                Volver al Panel
+              </button>
+            )}
+            <div className="block" />
             <div className="inline-flex items-center gap-2 bg-amber-500/30 text-amber-200 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md mb-2 border border-amber-400/30">
               <Sparkles className="w-3.5 h-3.5" /> Menú Digital Autoservicio
             </div>

@@ -25,24 +25,26 @@ export default function App() {
     <ToastProvider>
       <div className="flex min-h-screen bg-background text-on-background font-sans overflow-hidden">
         {/* Sidebar responsivo (cajón en móvil, fijo en desktop) */}
-        <Sidebar currentView={view} setView={navigateTo} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        {view !== 'customer' && (
+          <Sidebar currentView={view} setView={navigateTo} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+        )}
 
         {/* Backdrop para cerrar el sidebar en móvil */}
-        {sidebarOpen && (
+        {view !== 'customer' && sidebarOpen && (
           <div
             onClick={() => setSidebarOpen(false)}
             className="fixed inset-0 bg-black/40 z-30 md:hidden transition-opacity duration-300"
           />
         )}
 
-        <div className="flex-1 flex flex-col md:ml-64 h-screen relative overflow-hidden">
+        <div className={`flex-1 flex flex-col h-screen relative overflow-hidden ${view !== 'customer' ? 'md:ml-64' : ''}`}>
           {view !== 'customer' && (
             <TopBar currentView={view} setView={navigateTo} onOpenSidebar={() => setSidebarOpen(true)} />
           )}
 
           <main className="flex-1 overflow-y-auto">
             {view === 'pos'       && <PosView />}
-            {view === 'customer'  && <CustomerMenuView />}
+            {view === 'customer'  && <CustomerMenuView onBack={() => navigateTo('pos')} />}
             {view === 'orders'    && <OrdersView />}
             {view === 'kitchen'   && <KitchenView />}
             {view === 'inventory' && <InventoryView />}

@@ -165,10 +165,10 @@ def health_api():
 
 @app.get("/api/debug", tags=["Health"])
 def debug_info():
-    db_host = os.getenv("DB_HOST", "NOT_SET")
-    db_name = os.getenv("DB_NAME", "NOT_SET")
-    db_user = os.getenv("DB_USER", "NOT_SET")
-    db_port = os.getenv("DB_PORT", "NOT_SET")
+    db_host = os.getenv("DB_HOST", "NOT_SET").strip()
+    db_name = os.getenv("DB_NAME", "NOT_SET").strip()
+    db_user = os.getenv("DB_USER", "NOT_SET").strip()
+    db_port = os.getenv("DB_PORT", "NOT_SET").strip()
     
     db_status = "UNKNOWN"
     db_error = None

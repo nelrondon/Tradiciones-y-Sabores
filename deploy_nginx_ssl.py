@@ -1,4 +1,20 @@
-server {
+import paramiko
+import sys
+
+sys.stdout.reconfigure(encoding='utf-8')
+
+HOST     = "158.220.100.226"
+PORT     = 22
+USER     = "root"
+PASSWORD = "1415162013asd"
+
+client = paramiko.SSHClient()
+client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+client.connect(HOST, port=PORT, username=USER, password=PASSWORD, timeout=15)
+
+print("=== DEPLEGANDO NGINX CONF CON HTTPS Y PROXY PASS SIN TRAILING SLASH ===")
+
+nginx_content = """server {
     listen 80 default_server;
     listen [::]:80 default_server;
     listen 443 ssl default_server;
@@ -75,3 +91,19 @@ server {
     add_header X-Content-Type-Options "nosniff" always;
     add_header X-XSS-Protection "1; mode=block" always;
 }
+"""
+
+sftp = client.open_sftp()
+with sftp.open("/etc/nginx/sites-available/restaurant-equis", "w") as f:
+    f.write(nginx_content)
+sftp.close()
+
+stdin, stdout, stderr = client.exec_command("nginx -t && systemctl restart nginx")
+print(stdout.read().decode('utf-8', errors='ignore'))
+print(stderr.read().decode('utf-8', errors='ignore'))
+
+print("\n=== PROBANDO HTTP Y HTTPS EN PROXIES ===")
+stdin, stdout, stderr = client.exec_command("curl -i http://127.0.0.1/api/productos")
+print(stdout.read().decode('utf-8', errors='ignore')[:300])
+
+client.close()

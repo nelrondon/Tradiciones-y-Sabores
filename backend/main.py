@@ -3,7 +3,12 @@ main.py — Punto de entrada del backend FastAPI
 Restaurant Equis — API REST (Integrado con esquema de BD del equipo)
 """
 import os
+import sys
 from contextlib import asynccontextmanager
+
+# Ajustar sys.path para soportar importaciones locales en el entorno serverless de Vercel
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
@@ -12,6 +17,7 @@ from sqlalchemy import text
 from database import engine, Base, SessionLocal
 from models import Plato, Mesa, Cliente, CategoriaPlatoEnum, EstadoMesaEnum, Insumo, Proveedor
 from routers import ordenes, productos, inventario, proveedores, reportes
+
 
 load_dotenv()
 

@@ -109,6 +109,9 @@ async def lifespan(app: FastAPI):
     yield
 
 
+from fastapi.responses import JSONResponse
+import traceback
+
 app = FastAPI(
     title="Restaurant Equis — API",
     description="Backend REST adaptado 100% al esquema de base de datos del equipo.",
@@ -117,6 +120,17 @@ app = FastAPI(
     openapi_url="/openapi.json",
     lifespan=lifespan,
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": str(exc),
+            "type": type(exc).__name__,
+            "traceback": traceback.format_exc().splitlines()
+        }
+    )
 
 raw_origins = os.getenv("CORS_ORIGINS", "http://localhost:5173,http://158.220.100.226,http://localhost:3000")
 origins = [o.strip() for o in raw_origins.split(",") if o.strip()]
@@ -147,3 +161,36 @@ def health_root():
 @app.get("/api/", tags=["Health"])
 def health_api():
     return {"status": "ok", "servicio": "Restaurant Equis API", "version": "1.1.0"}
+
+
+@app.get("/api/debug", tags=["Health"])
+def debug_info():
+    db_host = os.getenv("DB_HOST", "NOT_SET")
+    db_name = os.getenv("DB_NAME", "NOT_SET")
+    db_user = os.getenv("DB_USER", "NOT_SET")
+    db_port = os.getenv("DB_PORT", "NOT_SET")
+    
+    db_status = "UNKNOWN"
+    db_error = None
+    try:
+        from database import SessionLocal
+        from models import Plato
+        db = SessionLocal()
+        count = db.query(Plato).count()
+        db.close()
+        db_status = f"CONNECTED (Platos count: {count})"
+    except Exception as e:
+        db_status = "FAILED"
+        db_error = f"{type(e).__name__}: {str(e)}"
+        
+    return {
+        "environment": {
+            "DB_HOST": db_host,
+            "DB_PORT": db_port,
+            "DB_NAME": db_name,
+            "DB_USER": db_user,
+        },
+        "db_connection": db_status,
+        "db_error": db_error
+    }
+

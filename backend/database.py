@@ -7,7 +7,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=False)
 
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "5432")
@@ -20,13 +20,20 @@ POSTGRES_URL = (
     f"@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 )
 
+# Intento de conexión directo (sin reintentos con sleep — incompatible con serverless)
 try:
-    engine = create_engine(POSTGRES_URL, pool_pre_ping=True)
+    engine = create_engine(
+        POSTGRES_URL,
+        pool_pre_ping=True,
+        pool_size=5,
+        max_overflow=10,
+        connect_args={"connect_timeout": 5},
+    )
     with engine.connect() as conn:
         pass
-    print("⚡ Conectado exitosamente a PostgreSQL.")
+    print(f"⚡ Conectado exitosamente a PostgreSQL en {DB_HOST}:{DB_PORT}.")
 except Exception as e:
-    print(f"⚠️ PostgreSQL no responde ({e}). Usando SQLite local.")
+    print(f"⚠️ PostgreSQL no respondió ({e}). Usando SQLite local.")
     SQLITE_URL = "sqlite:///./restaurant_equis.db"
     engine = create_engine(SQLITE_URL, connect_args={"check_same_thread": False})
 

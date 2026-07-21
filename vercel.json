@@ -1,25 +1,27 @@
 {
-  "services": {
-    "backend": {
-      "root": "backend/",
-      "entrypoint": "main.py"
+  "version": 2,
+  "builds": [
+    {
+      "src": "backend/main.py",
+      "use": "@vercel/python"
     },
-    "interfaz": {
-      "root": "./"
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
     }
-  },
+  ],
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": {
-        "service": "backend"
-      }
+      "destination": "backend/main.py"
     },
     {
       "source": "/(.*)",
-      "destination": {
-        "service": "interfaz"
-      }
+      "destination": "/$1"
     }
   ]
 }
+

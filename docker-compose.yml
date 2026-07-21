@@ -15,36 +15,6 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
-  # ── Backend API FastAPI ─────────────────────────────────────
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    container_name: restaurant_equis_api
-    restart: always
-    environment:
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: restaurant_equis
-      DB_USER: postgres
-      DB_PASSWORD: postgres
-      CORS_ORIGINS: "*"
-    ports:
-      - "5000:5000"
-    depends_on:
-      - postgres
-
-  # ── Frontend React + Nginx Proxy ───────────────────────────
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: restaurant_equis_web
-    restart: always
-    ports:
-      - "80:80"
-    depends_on:
-      - backend
-
 volumes:
   postgres_data:
+

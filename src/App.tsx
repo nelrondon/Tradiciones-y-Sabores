@@ -12,13 +12,26 @@ import { ToastProvider } from './components/Toast';
 
 const VIEWS = ['pos', 'customer', 'orders', 'kitchen', 'inventory', 'suppliers', 'reports'];
 
+const getInitialView = () => {
+  const params = new URLSearchParams(window.location.search);
+  const viewParam = params.get('view');
+  if (viewParam && VIEWS.includes(viewParam)) {
+    return viewParam;
+  }
+  return 'pos';
+};
+
 export default function App() {
-  const [view, setView] = useState('pos');
+  const [view, setView] = useState(getInitialView);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navigateTo = (v: string) => {
+  const navigateTo = (v: string, newWindow: boolean = false) => {
+    if (v === 'customer' && newWindow) {
+      window.open('/?view=customer', '_blank', 'noopener,noreferrer');
+      return;
+    }
     setView(v);
-    setSidebarOpen(false); // Cerrar sidebar al navegar en móvil
+    setSidebarOpen(false);
   };
 
   return (

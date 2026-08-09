@@ -16,6 +16,19 @@ const CATEGORIAS_DISPLAY = [
   { id: 'bebida', label: 'Bebidas & Jugos', icon: '🥤' }
 ];
 
+function formatCategoriaLabel(cat: string): string {
+  if (!cat) return 'General';
+  const c = cat.toLowerCase().replace(/_/g, ' ');
+  if (c === 'todos') return 'Todos';
+  if (c === 'plato principal' || c === 'platos principales') return 'Platos Principales';
+  if (c === 'bebida' || c === 'bebidas') return 'Bebidas & Jugos';
+  if (c === 'postre' || c === 'postres') return 'Postres';
+  if (c === 'adicional' || c === 'adicionales') return 'Adicionales';
+  if (c === 'entrada' || c === 'entradas') return 'Entradas & Tapas';
+  if (c === 'acompañante' || c === 'acompañantes') return 'Acompañantes';
+  return c.charAt(0).toUpperCase() + c.slice(1);
+}
+
 interface CartItem {
   producto: Producto;
   cantidad: number;
@@ -170,6 +183,12 @@ export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
     }
   };
 
+  const copyCustomerLink = () => {
+    const url = `${window.location.origin}/?view=customer`;
+    navigator.clipboard.writeText(url);
+    toast.showSuccess("¡Enlace para clientes copiado! Envíalo o ábrelo desde cualquier teléfono o tablet.");
+  };
+
   const filteredProductos = productos.filter(p => {
     const matchesCategory = selectedCategory === 'todos' || p.categoria === selectedCategory;
     const matchesSearch = p.nombre.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -190,12 +209,12 @@ export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
                 className="inline-flex items-center gap-1.5 text-xs font-bold bg-white/15 hover:bg-white/25 text-white px-3 py-1.5 rounded-xl mb-3 border border-white/10 transition cursor-pointer active:scale-95"
               >
                 <ArrowLeft className="w-3.5 h-3.5" />
-                Volver al Panel
+                Volver al Panel POS
               </button>
             )}
             <div className="block" />
             <div className="inline-flex items-center gap-2 bg-amber-500/30 text-amber-200 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md mb-2 border border-amber-400/30">
-              <Sparkles className="w-3.5 h-3.5" /> Menú Digital Autoservicio
+              <Sparkles className="w-3.5 h-3.5" /> Menú Digital Autoservicio & Pantalla Cliente
             </div>
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white drop-shadow-md">
               🍽️ Tradiciones y Sabores
@@ -205,7 +224,14 @@ export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={copyCustomerLink}
+              title="Copiar enlace directo para abrir en cualquier teléfono, tablet o monitor externo"
+              className="bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 backdrop-blur-md border border-white/20 transition cursor-pointer active:scale-95"
+            >
+              📲 Copiar Enlace Cliente
+            </button>
             {activeOrder && (
               <button
                 onClick={() => setIsCartOpen(false)}
@@ -363,7 +389,7 @@ export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
                       ${Number(prod.precio).toFixed(2)}
                     </div>
                     <div className="absolute top-3 left-3 bg-amber-500/20 text-amber-800 text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md backdrop-blur-sm">
-                      {prod.categoria}
+                      {formatCategoriaLabel(prod.categoria)}
                     </div>
                   </div>
 

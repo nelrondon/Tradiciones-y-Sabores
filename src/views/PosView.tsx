@@ -30,8 +30,15 @@ interface InfoCliente {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 let ticketCounter = 9000 + Math.floor(Math.random() * 999);
-function nuevoTicketId() {
-  return ++ticketCounter;
+function formatCategoriaLabel(cat: string): string {
+  if (!cat) return 'General';
+  const c = cat.toLowerCase().replace(/_/g, ' ');
+  if (c === 'todos') return 'Todos los Platos';
+  if (c === 'plato principal' || c === 'platos principales') return 'Platos Principales';
+  if (c === 'bebida' || c === 'bebidas') return 'Bebidas';
+  if (c === 'postre' || c === 'postres') return 'Postres';
+  if (c === 'adicional' || c === 'adicionales') return 'Adicionales';
+  return c.charAt(0).toUpperCase() + c.slice(1);
 }
 
 function generarMensajeWA(
@@ -260,7 +267,6 @@ export default function PosView() {
       <section className={`flex-1 flex flex-col bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm ${
         activeMobileTab === 'catalog' ? 'flex' : 'hidden lg:flex'
       }`}>
-
         {/* Tabs de categorías */}
         <div className="flex border-b border-outline-variant bg-surface-container-highest overflow-x-auto shrink-0">
           {loadingProductos ? (
@@ -278,7 +284,7 @@ export default function PosView() {
                     : 'text-on-surface-variant border-transparent hover:bg-surface-variant'
                 }`}
               >
-                {cat}
+                {formatCategoriaLabel(cat)}
               </button>
             ))
           )}
@@ -335,7 +341,7 @@ export default function PosView() {
                 >
                   <div className="w-full">
                     <span className="bg-surface-container-high text-on-surface-variant text-[10px] font-bold uppercase px-2 py-0.5 rounded tracking-wide">
-                      {prod.categoria}
+                      {formatCategoriaLabel(prod.categoria)}
                     </span>
                     <h3 className="text-base font-bold text-on-surface mt-2 leading-tight">
                       {prod.nombre}
@@ -477,7 +483,7 @@ export default function PosView() {
                 <div className="flex justify-between items-start gap-4">
                   <div className="flex-1 min-w-0">
                     <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wide block">
-                      {item.producto.categoria}
+                      {formatCategoriaLabel(item.producto.categoria)}
                     </span>
                     <h4 className="text-sm font-black text-on-surface mt-0.5 leading-snug">
                       {item.producto.nombre}

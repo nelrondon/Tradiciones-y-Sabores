@@ -62,14 +62,24 @@ export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarPr
 
       {/* ── Acciones ──────────────────────────────────────── */}
       <div className="flex items-center gap-2">
-        {/* Botón Pantalla Cliente */}
-        <button
-          onClick={() => setView('customer')}
-          className="flex items-center gap-1.5 bg-amber-50 text-amber-800 hover:bg-amber-100 font-extrabold px-3 py-1.5 rounded-lg border border-amber-300 text-xs transition-all shadow-sm active:scale-95 cursor-pointer"
-        >
-          <Monitor size={15} className="text-amber-600" />
-          <span>Pantalla Cliente</span>
-        </button>
+        {/* Botón Pantalla Cliente (Abre en nueva pestaña / monitor secundario) */}
+        <div className="flex items-center gap-1 bg-amber-50 p-1 rounded-xl border border-amber-300 shadow-sm">
+          <button
+            onClick={() => window.open('/?view=customer', '_blank', 'noopener,noreferrer')}
+            title="Abrir en un monitor secundario o nueva pestaña para el cliente"
+            className="flex items-center gap-1.5 bg-amber-500 text-white hover:bg-amber-600 font-extrabold px-3 py-1 rounded-lg text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
+          >
+            <Monitor size={15} />
+            <span>Pantalla Cliente ↗</span>
+          </button>
+          <button
+            onClick={() => setView('customer')}
+            title="Ver pantalla cliente en esta misma pestaña"
+            className="text-[11px] font-bold text-amber-800 hover:text-amber-950 px-2 py-1 rounded hover:bg-amber-100/60 transition-colors"
+          >
+            (Ver aquí)
+          </button>
+        </div>
 
         {/* Búsqueda global */}
         <div className="relative hidden xl:block">

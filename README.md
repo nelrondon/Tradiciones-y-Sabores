@@ -1,7 +1,42 @@
-# 🍽️ Restaurante Equis — Sistema de Gestión
-> Sistema web completo para gestión de restaurante: POS, Cocina, Inventario, Proveedores y Reportes.
+# 🍽️ Tradiciones y Sabores — Sistema de Gestión
 
-**🌐 Sistema en producción:** [`http://restauranteequis.158.220.100.226.nip.io`](http://restauranteequis.158.220.100.226.nip.io)
+> Sistema web de gestión para restaurante: POS, Cocina, Inventario, Proveedores y Reportes.
+
+---
+
+## ⚠️ PENDIENTE PARA TERMINAR EL DESPLIEGUE EN VERCEL
+
+> **Leer esto primero si retomas el proyecto.**
+
+### Qué falta para que Vercel funcione 100%
+
+El frontend está desplegado en Vercel pero **necesita conectarse al backend de los compañeros**.
+La arquitectura es:
+
+```
+Frontend (Vercel)  →  Backend Node.js (compañeros)  →  PostgreSQL (BD de los compañeros)
+```
+
+El frontend NO toca la BD directamente. Solo habla con la API de los compañeros.
+
+### Pasos pendientes:
+
+**1. Pedirle a los compañeros del backend:**
+- [ ] ¿En qué URL/IP tienen corriendo el backend Node.js? (ej: `http://1.2.3.4:3000`)
+- [ ] ¿Cuál es la `API_KEY` que configuraron en su `.env`?
+
+**2. Ir a Vercel → Settings → Environment Variables y agregar:**
+
+| Variable | Valor que te pasan los compañeros |
+|---|---|
+| `VITE_API_URL` | URL del backend (ej: `http://1.2.3.4:3000`) |
+| `VITE_API_KEY` | La API Key del backend de los compañeros |
+
+**3. Hacer Redeploy en Vercel** después de guardar las variables.
+
+### ¿Por qué falta esto?
+Los compañeros manejan su propio backend y BD.
+Sin la URL y API Key de ellos, el front en Vercel no sabe a dónde enviar las peticiones.
 
 ---
 
@@ -10,10 +45,9 @@
 | Capa | Tecnología |
 |------|-----------|
 | **Frontend** | React 19 · TypeScript · Vite 6 · Tailwind CSS 4 |
-| **Backend** | Python 3.11 · FastAPI · SQLAlchemy · Pydantic · Uvicorn |
-| **Base de datos** | PostgreSQL 15+ |
-| **Servidor web** | Nginx (reverse proxy + SPA) |
-| **Infraestructura** | Linux · systemd · nip.io |
+| **Backend** | Node.js · Express (manejado por equipo de BD) |
+| **Base de datos** | PostgreSQL 15+ (manejada por equipo de BD) |
+| **Despliegue frontend** | Vercel |
 
 **Diseño:** Responsivo — funciona en desktop, tablet y móvil
 
@@ -22,7 +56,7 @@
 ## 📦 Módulos
 
 | Módulo | Usuarios | Función |
-|--------|---------|---------|
+|--------|---------|---------||
 | **POS — Caja** | Cajeros | Catálogo, carrito, tipos de pedido, WhatsApp |
 | **Cocina** | Cocineros | Órdenes activas, cambio de estado, sonido de alerta |
 | **Pedidos** | Supervisores | Historial completo, cancelar órdenes |
@@ -32,112 +66,85 @@
 
 ---
 
-## 🚀 Correr localmente
+## 🚀 Correr localmente (solo frontend)
 
 ### Requisitos
 - Node.js 18+
-- Python 3.11+
 
-### Frontend
+### 1. Instalar dependencias
 ```bash
 npm install
-npm run dev
-# Disponible en http://localhost:3000
 ```
 
-### Backend
-```bash
-cd backend
-pip install -r requirements.txt
-cp .env.example .env   # llenar con las credenciales de PostgreSQL
-uvicorn main:app --reload --port 5000
-```
-
-### Variables de entorno (`.env.local` en la raíz)
+### 2. Crear archivo `.env` en la raíz del proyecto
 ```env
-VITE_API_URL=http://localhost:5000
+# URL del backend de los compañeros (pídela a ellos)
+VITE_API_URL=http://localhost:3000
+
+# API Key del backend de los compañeros (pídela a ellos)
+VITE_API_KEY=tu_api_key_aqui
+
+# WhatsApp del restaurante (con código de país, sin signos)
 VITE_WHATSAPP_NUMERO=584140000000
 ```
 
----
-
-## 🔌 API REST — Endpoints
-
-**Documentación interactiva (Swagger):** `/api/docs`
-
-| Método | Endpoint | Descripción |
-|--------|---------|-------------|
-| `GET` | `/api/` | Health check |
-| `GET` | `/api/ordenes` | Todas las órdenes |
-| `GET` | `/api/ordenes?estatus=activo` | Órdenes activas (cocina) |
-| `POST` | `/api/ordenes` | Crear nueva orden |
-| `PUT` | `/api/ordenes/{id}` | Cambiar estado |
-| `DELETE` | `/api/ordenes/{id}` | Cancelar orden |
-| `GET` | `/api/productos` | Catálogo de productos |
-| `GET` | `/api/inventario` | Lista de inventario |
-| `POST` | `/api/inventario` | Agregar ítem |
-| `PUT` | `/api/inventario/{id}` | Editar ítem |
-| `DELETE` | `/api/inventario/{id}` | Eliminar ítem |
-| `GET` | `/api/proveedores` | Lista de proveedores |
-| `POST` | `/api/proveedores` | Agregar proveedor |
-| `PUT` | `/api/proveedores/{id}` | Editar proveedor |
-| `DELETE` | `/api/proveedores/{id}` | Eliminar proveedor |
-| `GET` | `/api/reportes/resumen` | KPIs del dashboard |
-| `GET` | `/api/reportes/pedidos` | Pedidos con filtros |
+### 3. Correr el dev server
+```bash
+npm run dev
+# Disponible en http://localhost:5173
+```
 
 ---
 
-## 🗂️ Estructura del proyecto
+## 🔌 API del backend (endpoints de los compañeros)
+
+El frontend consume la API de los compañeros en `/api/v1/...`
+
+| Método | Endpoint | Auth | Descripción |
+|--------|---------|------|-------------|
+| `GET`  | `/api/v1/ordenes` | Pública | Todas las órdenes |
+| `GET`  | `/api/v1/ordenes?estatus=activo` | Pública | Órdenes activas (cocina) |
+| `POST` | `/api/v1/ordenes` | Pública | Crear nueva orden |
+| `PUT`  | `/api/v1/ordenes/{id}` | Pública | Cambiar estado |
+| `DELETE` | `/api/v1/ordenes/{id}` | Pública | Cancelar orden (soft-delete) |
+| `GET`  | `/api/v1/platos` | `x-api-key` | Catálogo de platos |
+| `GET`  | `/api/v1/inventario` | `x-api-key` | Lista de insumos |
+| `POST` | `/api/v1/inventario` | `x-api-key` | Agregar insumo |
+| `PUT`  | `/api/v1/inventario/{id}` | `x-api-key` | Editar insumo |
+| `DELETE` | `/api/v1/inventario/{id}` | `x-api-key` | Eliminar insumo |
+| `GET`  | `/api/v1/reportes/resumen` | `x-api-key` | KPIs del dashboard |
+| `GET`  | `/api/v1/reportes/pedidos` | `x-api-key` | Pedidos con filtros |
+
+> **Nota:** Los endpoints con `x-api-key` requieren el header `x-api-key: <API_KEY>` en cada request.
+> La API Key viene del `.env` del backend de los compañeros.
+
+---
+
+## 🗂️ Estructura del proyecto (solo frontend)
 
 ```
 Restaurant-Equis/
-├── backend/
-│   ├── main.py              ← Punto de entrada FastAPI
-│   ├── database.py          ← Conexión a PostgreSQL
-│   ├── models.py            ← Tablas ORM
-│   ├── schemas.py           ← Validación Pydantic
-│   ├── routers/             ← Endpoints por módulo
-│   │   ├── ordenes.py
-│   │   ├── productos.py
-│   │   ├── inventario.py
-│   │   ├── proveedores.py
-│   │   └── reportes.py
-│   ├── .env.example         ← Plantilla de configuración
-│   └── requirements.txt
-│
 ├── src/
-│   ├── api/index.ts         ← Capa de comunicación con el backend
+│   ├── api/index.ts         ← Capa de comunicación con el backend de los compañeros
 │   ├── components/
-│   │   ├── Sidebar.tsx
-│   │   ├── TopBar.tsx       ← Reloj hora Venezuela
+│   │   ├── Sidebar.tsx      ← Navegación lateral
+│   │   ├── TopBar.tsx       ← Barra superior con reloj Venezuela
 │   │   └── Toast.tsx        ← Notificaciones globales
 │   └── views/
-│       ├── PosView.tsx
-│       ├── KitchenView.tsx
-│       ├── OrdersView.tsx
-│       ├── InventoryView.tsx
-│       ├── SuppliersView.tsx
-│       └── ReportsView.tsx
+│       ├── PosView.tsx         ← Punto de venta / caja
+│       ├── KitchenView.tsx     ← Tablero de cocina
+│       ├── OrdersView.tsx      ← Historial de pedidos
+│       ├── InventoryView.tsx   ← Inventario
+│       ├── SuppliersView.tsx   ← Proveedores
+│       ├── CustomerMenuView.tsx ← Menú digital para clientes
+│       └── ReportsView.tsx     ← Reportes y KPIs
 │
-├── nginx.conf               ← Config del servidor web
-├── deploy.py                ← Script de despliegue automático
-├── PARA_EQUIPO_BD.md        ← Instrucciones para el equipo de BD
-├── PARA_EQUIPO_N8N.md       ← Instrucciones para el equipo de n8n
-└── ENTREGA.md               ← Documentación del proyecto
+├── .env.example             ← Variables de entorno necesarias
+├── index.html               ← Punto de entrada HTML
+├── vite.config.ts           ← Config de Vite
+└── package.json
 ```
 
 ---
 
-## 🌐 Despliegue en producción
-
-```bash
-# Build del frontend
-npm run build
-
-# Subir al servidor automáticamente
-python deploy.py
-```
-
----
-
-*Versión 1.0.0 — Julio 2026*
+*Versión 2.0.0 — Agosto 2026 — Tradiciones y Sabores*

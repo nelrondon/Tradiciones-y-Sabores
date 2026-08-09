@@ -198,7 +198,7 @@ export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
               <Sparkles className="w-3.5 h-3.5" /> Menú Digital Autoservicio
             </div>
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white drop-shadow-md">
-              🍽️ Restaurante Equis
+              🍽️ Tradiciones y Sabores
             </h1>
             <p className="text-amber-100 text-sm mt-1 font-medium max-w-md">
               Explora nuestra carta gastronómica, haz tu pedido al instante y síguelo en vivo hasta tu mesa.

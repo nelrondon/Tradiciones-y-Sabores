@@ -49,7 +49,7 @@ export default function Sidebar({ currentView, setView, isOpen, onClose }: Sideb
           </div>
           <div>
             <div className="text-[15px] font-black text-white leading-tight tracking-tight uppercase">
-              Restaurante Equis
+              Tradiciones y Sabores
             </div>
             <div className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mt-0.5">
               Sistema de gestión

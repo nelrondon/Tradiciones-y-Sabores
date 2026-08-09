@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ReceiptText, Loader2, AlertTriangle, RefreshCw, ChevronDown, ChevronUp, XCircle } from 'lucide-react';
+import { ReceiptText, Loader2, AlertTriangle, RefreshCw, ChevronDown, ChevronUp, XCircle, Search } from 'lucide-react';
 import { api, type Orden, type EstatusOrden } from '../api';
 import { useToast } from '../components/Toast';
 
@@ -43,6 +43,7 @@ export default function OrdersView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filtroEstado, setFiltroEstado] = useState<EstatusOrden | ''>('');
+  const [busqueda, setBusqueda] = useState('');
   const [expandida, setExpandida] = useState<number | null>(null);
   const [cancelando, setCancelando] = useState<number | null>(null);
 
@@ -61,9 +62,17 @@ export default function OrdersView() {
 
   useEffect(() => { cargar(); }, [cargar]);
 
-  const filtradas = filtroEstado
-    ? ordenes.filter((o) => o.Estatus_Orden === filtroEstado)
-    : ordenes;
+  const filtradas = ordenes
+    .filter((o) => (filtroEstado ? (o.estado_orden || o.Estatus_Orden || '').toLowerCase().includes(filtroEstado.toLowerCase()) : true))
+    .filter((o) => {
+      if (!busqueda.trim()) return true;
+      const q = busqueda.trim().toLowerCase().replace(/[^0-9a-z]/g, '');
+      const ticket = String(o.num_ticket || o.id_pedido || '').toLowerCase();
+      const cliente = (o.cliente_nombre || '').toLowerCase();
+      const cedula = (o.cliente_cedula || o.cedula_cliente || '').toLowerCase().replace(/[^0-9a-z]/g, '');
+      const telf = (o.cliente_telefono || '').toLowerCase().replace(/[^0-9a-z]/g, '');
+      return ticket.includes(q) || cliente.includes(busqueda.trim().toLowerCase()) || cedula.includes(q) || telf.includes(q);
+    });
 
   const conteo = (e: EstatusOrden) => ordenes.filter((o) => o.Estatus_Orden === e).length;
 
@@ -137,7 +146,27 @@ export default function OrdersView() {
         })}
       </div>
 
-      {/* Filtros rápidos */}
+      {/* Barra de Búsqueda para Vendedores / Cajeros */}
+      <div className="relative w-full">
+        <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-outline" />
+        <input
+          type="text"
+          placeholder="🔍 Buscar pedido por Cédula de cliente, Nombre, Ticket (#) o Teléfono..."
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          className="w-full pl-10 pr-12 h-11 bg-surface border-2 border-outline-variant/80 rounded-xl text-sm font-semibold text-on-surface focus:border-secondary-container focus:ring-1 focus:ring-secondary-container outline-none transition-all placeholder:text-outline shadow-sm"
+        />
+        {busqueda && (
+          <button
+            onClick={() => setBusqueda('')}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-outline hover:text-on-surface bg-surface-container px-2 py-1 rounded"
+          >
+            Limpiar
+          </button>
+        )}
+      </div>
+
+      {/* Filtros rápidos por estado */}
       <div className="flex items-center gap-2 flex-wrap">
         {ESTADOS.map((e) => (
           <button

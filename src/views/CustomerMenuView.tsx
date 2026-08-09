@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { 
   Utensils, ShoppingBag, Search, Sparkles, CheckCircle2, Clock, 
   MapPin, Phone, User, CreditCard, ChevronRight, X, Plus, Minus,
-  Flame, Award, ArrowLeft, RefreshCw, AlertCircle
+  Flame, Award, AlertCircle, RefreshCw
 } from 'lucide-react';
 import { api, Producto, Orden } from '../api';
 import { useToast } from '../components/Toast';
@@ -36,10 +36,10 @@ interface CartItem {
 }
 
 interface CustomerMenuViewProps {
-  onBack?: () => void;
+  // Esta ventana es autónoma — no hay navegación hacia el sistema interno
 }
 
-export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
+export default function CustomerMenuView(_props: CustomerMenuViewProps) {
   const toast = useToast();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,6 +62,13 @@ export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
   // Ticket activo / Seguimiento en vivo
   const [activeOrder, setActiveOrder] = useState<Orden | null>(null);
   const [trackingLoading, setTrackingLoading] = useState(false);
+
+  // Consulta de pedidos por Cédula (Cliente)
+  const [isSearchOrderOpen, setIsSearchOrderOpen] = useState(false);
+  const [searchCedula, setSearchCedula] = useState('');
+  const [foundOrders, setFoundOrders] = useState<Orden[]>([]);
+  const [searchingOrders, setSearchingOrders] = useState(false);
+  const [searchedYet, setSearchedYet] = useState(false);
 
   // Cargar catálogo de platos al iniciar
   useEffect(() => {
@@ -183,10 +190,32 @@ export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
     }
   };
 
-  const copyCustomerLink = () => {
-    const url = `${window.location.origin}/?view=customer`;
-    navigator.clipboard.writeText(url);
-    toast.showSuccess("¡Enlace para clientes copiado! Envíalo o ábrelo desde cualquier teléfono o tablet.");
+  const handleSearchOrderByCedula = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!searchCedula.trim()) {
+      toast.showError("Por favor ingresa tu número de Cédula");
+      return;
+    }
+    try {
+      setSearchingOrders(true);
+      setSearchedYet(true);
+      const allOrders = await api.getOrdenes();
+      const queryClean = searchCedula.trim().toLowerCase().replace(/[^0-9a-z]/g, '');
+      const matched = allOrders.filter(o => {
+        const c1 = (o.cliente_cedula ?? o.cedula_cliente ?? '').toLowerCase().replace(/[^0-9a-z]/g, '');
+        return c1.includes(queryClean) || queryClean.includes(c1);
+      });
+      // Ordenar de más reciente a más antiguo
+      matched.sort((a, b) => (b.id_pedido ?? 0) - (a.id_pedido ?? 0));
+      setFoundOrders(matched);
+      if (matched.length === 0) {
+        toast.showInfo("No se encontraron pedidos registrados con esa Cédula.");
+      }
+    } catch (err: any) {
+      toast.showError("Error al consultar pedidos: " + err.message);
+    } finally {
+      setSearchingOrders(false);
+    }
   };
 
   const filteredProductos = productos.filter(p => {
@@ -198,40 +227,38 @@ export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
 
   return (
     <div className="min-h-screen bg-surface font-sans text-on-surface pb-24">
-      {/* ── BANNER HEADER CLIENTE ── */}
+      {/* ── HEADER CLIENTE — Solo el restaurante, nada del sistema interno ── */}
       <header className="relative bg-gradient-to-r from-primary-dark via-primary to-amber-600 text-on-primary py-8 px-4 sm:px-8 shadow-xl overflow-hidden">
         <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />
         <div className="relative max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+
+          {/* Branding del restaurante */}
           <div className="text-center md:text-left">
-            {onBack && (
-              <button
-                onClick={onBack}
-                className="inline-flex items-center gap-1.5 text-xs font-bold bg-white/15 hover:bg-white/25 text-white px-3 py-1.5 rounded-xl mb-3 border border-white/10 transition cursor-pointer active:scale-95"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" />
-                Volver al Panel POS
-              </button>
-            )}
-            <div className="block" />
             <div className="inline-flex items-center gap-2 bg-amber-500/30 text-amber-200 px-3 py-1 rounded-full text-xs font-semibold backdrop-blur-md mb-2 border border-amber-400/30">
-              <Sparkles className="w-3.5 h-3.5" /> Menú Digital Autoservicio & Pantalla Cliente
+              <Sparkles className="w-3.5 h-3.5" /> Menú Digital
             </div>
             <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-white drop-shadow-md">
               🍽️ Tradiciones y Sabores
             </h1>
             <p className="text-amber-100 text-sm mt-1 font-medium max-w-md">
-              Explora nuestra carta gastronómica, haz tu pedido al instante y síguelo en vivo hasta tu mesa.
+              Explora nuestra carta, haz tu pedido y síguelo en vivo hasta tu mesa.
             </p>
           </div>
 
+          {/* Botones del cliente: carrito, consulta por cédula y seguimiento de su orden */}
           <div className="flex flex-wrap items-center gap-3">
             <button
-              onClick={copyCustomerLink}
-              title="Copiar enlace directo para abrir en cualquier teléfono, tablet o monitor externo"
-              className="bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-xl text-xs flex items-center gap-1.5 backdrop-blur-md border border-white/20 transition cursor-pointer active:scale-95"
+              onClick={() => {
+                setIsSearchOrderOpen(true);
+                setSearchedYet(false);
+                setFoundOrders([]);
+              }}
+              className="bg-white/20 hover:bg-white/30 text-white font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 transition backdrop-blur-md border border-white/20 text-sm active:scale-95 cursor-pointer"
             >
-              📲 Copiar Enlace Cliente
+              <Search className="w-4 h-4" />
+              <span>Buscar mi Pedido</span>
             </button>
+
             {activeOrder && (
               <button
                 onClick={() => setIsCartOpen(false)}
@@ -241,7 +268,6 @@ export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
                 Seguimiento Orden #{activeOrder.num_ticket || activeOrder.id_pedido}
               </button>
             )}
-
             <button
               onClick={() => setIsCartOpen(true)}
               className="relative bg-amber-400 text-amber-950 hover:bg-amber-300 font-extrabold px-5 py-2.5 rounded-xl shadow-lg flex items-center gap-2.5 transition transform active:scale-95"
@@ -629,6 +655,154 @@ export default function CustomerMenuView({ onBack }: CustomerMenuViewProps) {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL: CONSULTAR PEDIDOS POR CÉDULA DE CLIENTE ── */}
+      {isSearchOrderOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4 animate-fadeIn">
+          <div className="bg-surface border border-outline-variant/40 rounded-3xl w-full max-w-xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            {/* Header Modal */}
+            <div className="p-6 bg-gradient-to-r from-primary via-primary-dark to-amber-700 text-on-primary flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center border border-amber-300/30 text-amber-200">
+                  <Search className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-lg text-white">Consultar Estado de Pedidos</h3>
+                  <p className="text-xs text-amber-100/90 font-medium">Ingresa tu Cédula para ver tus órdenes en tiempo real</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setIsSearchOrderOpen(false)}
+                className="w-8 h-8 rounded-full bg-black/20 hover:bg-black/40 text-white flex items-center justify-center transition cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Formulario de búsqueda */}
+            <div className="p-6 bg-surface-container-low border-b border-outline-variant/30">
+              <form onSubmit={handleSearchOrderByCedula} className="flex gap-2">
+                <input
+                  type="text"
+                  required
+                  placeholder="Ej. V-12345678 o 12345678"
+                  value={searchCedula}
+                  onChange={(e) => setSearchCedula(e.target.value)}
+                  className="flex-1 px-4 py-3 bg-surface border border-outline-variant rounded-xl text-sm font-semibold text-on-surface focus:border-secondary-container focus:ring-1 focus:ring-secondary-container outline-none"
+                />
+                <button
+                  type="submit"
+                  disabled={searchingOrders}
+                  className="bg-amber-500 hover:bg-amber-600 text-white font-extrabold px-5 py-3 rounded-xl shadow transition flex items-center gap-2 text-sm disabled:opacity-50 cursor-pointer active:scale-95"
+                >
+                  {searchingOrders ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Search className="w-4 h-4" />
+                      <span>Buscar</span>
+                    </>
+                  )}
+                </button>
+              </form>
+            </div>
+
+            {/* Resultados de búsqueda */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-4">
+              {!searchedYet && (
+                <div className="text-center py-8 text-on-surface-variant">
+                  <User className="w-12 h-12 mx-auto text-outline mb-2 opacity-60" />
+                  <p className="text-sm font-bold">Ingresa tu Cédula arriba para consultar tus pedidos</p>
+                  <p className="text-xs text-outline mt-1">Podrás ver el estado en vivo (Recibido, En Cocina, Listo, Entregado)</p>
+                </div>
+              )}
+
+              {searchedYet && searchingOrders && (
+                <div className="text-center py-8 text-on-surface-variant flex flex-col items-center gap-2">
+                  <RefreshCw className="w-8 h-8 animate-spin text-amber-600" />
+                  <p className="text-sm font-bold">Buscando tus pedidos en el sistema...</p>
+                </div>
+              )}
+
+              {searchedYet && !searchingOrders && foundOrders.length === 0 && (
+                <div className="text-center py-8 bg-amber-50/50 border border-amber-200/60 rounded-2xl p-6">
+                  <AlertCircle className="w-10 h-10 mx-auto text-amber-600 mb-2" />
+                  <h4 className="font-bold text-on-surface text-sm">No encontramos pedidos con esa Cédula</h4>
+                  <p className="text-xs text-on-surface-variant mt-1">
+                    Verifica los dígitos e intenta nuevamente o consulta en caja.
+                  </p>
+                </div>
+              )}
+
+              {searchedYet && !searchingOrders && foundOrders.length > 0 && (
+                <div className="space-y-3">
+                  <div className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                    Pedidos Encontrados ({foundOrders.length}):
+                  </div>
+                  {foundOrders.map((o) => {
+                    const estatus = (o.estado_orden || o.Estatus_Orden || 'recibido').toLowerCase();
+                    let badgeBg = 'bg-blue-100 text-blue-800 border-blue-300';
+                    let badgeIcon = '🟦';
+                    let badgeLabel = 'Recibido';
+
+                    if (estatus.includes('preparando') || estatus.includes('cocina')) {
+                      badgeBg = 'bg-amber-100 text-amber-900 border-amber-300';
+                      badgeIcon = '🟨';
+                      badgeLabel = 'En Cocina / Preparando';
+                    } else if (estatus.includes('listo')) {
+                      badgeBg = 'bg-emerald-100 text-emerald-900 border-emerald-300';
+                      badgeIcon = '🟩';
+                      badgeLabel = '¡Listo!';
+                    } else if (estatus.includes('entregado')) {
+                      badgeBg = 'bg-gray-100 text-gray-800 border-gray-300';
+                      badgeIcon = '⬛';
+                      badgeLabel = 'Entregado';
+                    } else if (estatus.includes('cancelado')) {
+                      badgeBg = 'bg-red-100 text-red-800 border-red-300';
+                      badgeIcon = '🟥';
+                      badgeLabel = 'Cancelado';
+                    }
+
+                    return (
+                      <div
+                        key={o.id_pedido}
+                        className="bg-surface border border-outline-variant/40 rounded-2xl p-4 shadow-sm hover:border-amber-400 transition"
+                      >
+                        <div className="flex items-center justify-between border-b border-outline-variant/20 pb-2 mb-3">
+                          <div>
+                            <span className="text-xs font-bold text-on-surface-variant">Ticket</span>
+                            <h4 className="font-black text-on-surface text-base">#{o.num_ticket || o.id_pedido}</h4>
+                          </div>
+                          <span className={`text-xs font-extrabold px-3 py-1 rounded-full border flex items-center gap-1 ${badgeBg}`}>
+                            <span>{badgeIcon}</span>
+                            <span>{badgeLabel}</span>
+                          </span>
+                        </div>
+
+                        <div className="text-xs text-on-surface-variant space-y-1 mb-3">
+                          <p><span className="font-semibold text-on-surface">Tipo:</span> {o.tipo === 'mesa' ? `Mesa #${o.mesa || o.id_mesa || 1}` : o.tipo === 'delivery' ? 'Delivery' : 'Para Llevar'}</p>
+                          <p><span className="font-semibold text-on-surface">Total:</span> <span className="font-black text-primary text-sm">${Number(o.total || 0).toFixed(2)}</span></p>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            setActiveOrder(o);
+                            setIsSearchOrderOpen(false);
+                          }}
+                          className="w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-900 font-bold py-2 rounded-xl text-xs transition border border-amber-300/40 flex items-center justify-center gap-1 cursor-pointer active:scale-98"
+                        >
+                          <span>Ver Seguimiento en Vivo</span>
+                          <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

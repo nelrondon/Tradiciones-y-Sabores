@@ -124,17 +124,16 @@ export interface ResumenReporte {
 // Adaptan la respuesta del backend a las interfaces del front
 // ─────────────────────────────────────────────────────────────
 
-/** Normaliza un Plato (backend devuelve id_plato; front espera id_producto también) */
 function normalizePlato(p: any): Producto {
   return {
-    id_producto: p.id_plato ?? p.id_producto,
-    id_plato:    p.id_plato ?? p.id_producto,
-    nombre:      p.nombre,
-    descripcion: p.descripcion ?? '',
-    precio:      Number(p.precio),
-    categoria:   p.categoria,
-    imagen_url:  p.imagen_url ?? undefined,
-    disponible:  p.disponible ?? true,
+    id_producto: Number(p?.id_plato ?? p?.id_producto ?? 0),
+    id_plato:    Number(p?.id_plato ?? p?.id_producto ?? 0),
+    nombre:      String(p?.nombre ?? 'Plato'),
+    descripcion: String(p?.descripcion ?? ''),
+    precio:      Number(p?.precio ?? 0),
+    categoria:   String(p?.categoria ?? 'plato_principal'),
+    imagen_url:  p?.imagen_url ?? undefined,
+    disponible:  Boolean(p?.disponible ?? true),
   };
 }
 
@@ -243,17 +242,16 @@ export const api = {
       headers: PUBLIC_HEADERS,
     }).then(r => { check(r, 'Error cancelando la orden'); }),
 
-  // ── Catálogo de Platos (requiere API key) ────────────────
   getProductos: (): Promise<Producto[]> =>
     fetch(`${BASE}/api/v1/platos`, { headers: AUTH_HEADERS })
       .then(r => check(r, 'Error cargando catálogo de platos').json())
-      .then((rows: any[]) => rows.map(normalizePlato)),
+      .then((rows: any) => (Array.isArray(rows) ? rows : []).map(normalizePlato)),
 
   // ── Inventario (requiere API key) ────────────────────────
   getInventario: (): Promise<ItemInventario[]> =>
     fetch(`${BASE}/api/v1/inventario`, { headers: AUTH_HEADERS })
       .then(r => check(r, 'Error cargando inventario').json())
-      .then((rows: any[]) => rows.map(normalizeInsumo)),
+      .then((rows: any) => (Array.isArray(rows) ? rows : []).map(normalizeInsumo)),
 
   crearItem: (data: any): Promise<ItemInventario> =>
     fetch(`${BASE}/api/v1/inventario`, {

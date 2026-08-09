@@ -10,26 +10,44 @@ import OrdersView from './views/OrdersView';
 import CustomerMenuView from './views/CustomerMenuView';
 import { ToastProvider } from './components/Toast';
 
-const VIEWS = ['pos', 'customer', 'orders', 'kitchen', 'inventory', 'suppliers', 'reports'];
+const SYSTEM_VIEWS = ['pos', 'orders', 'kitchen', 'inventory', 'suppliers', 'reports'];
 
-const getInitialView = () => {
+/**
+ * Si la URL tiene ?view=menu, esta ventana es SOLO para el cliente.
+ * El sistema (POS, cocina, inventario, etc.) queda en su propia ventana del personal.
+ */
+const isCustomerWindow = (): boolean => {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('view') === 'menu';
+};
+
+const getInitialView = (): string => {
   const params = new URLSearchParams(window.location.search);
   const viewParam = params.get('view');
-  if (viewParam && VIEWS.includes(viewParam)) {
-    return viewParam;
-  }
+  if (viewParam && SYSTEM_VIEWS.includes(viewParam)) return viewParam;
   return 'pos';
 };
 
-export default function App() {
+// ── Ventana exclusiva para clientes ──────────────────────────────────────────
+// Se carga cuando la URL tiene ?view=customer.
+// El cliente SOLO puede ver el menú y hacer su pedido. 
+// No hay sidebar, no hay topbar del sistema, no hay acceso a nada más.
+function CustomerApp() {
+  return (
+    <ToastProvider>
+      <CustomerMenuView />
+    </ToastProvider>
+  );
+}
+
+// ── App del sistema interno (personal del restaurante) ────────────────────────
+// Se carga cuando la URL NO tiene ?view=customer.
+// Solo los empleados con acceso a esta ventana ven el POS, cocina, inventario, etc.
+function SystemApp() {
   const [view, setView] = useState(getInitialView);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const navigateTo = (v: string, newWindow: boolean = false) => {
-    if (v === 'customer' && newWindow) {
-      window.open('/?view=customer', '_blank', 'noopener,noreferrer');
-      return;
-    }
+  const navigateTo = (v: string) => {
     setView(v);
     setSidebarOpen(false);
   };
@@ -37,27 +55,30 @@ export default function App() {
   return (
     <ToastProvider>
       <div className="flex min-h-screen bg-background text-on-background font-sans overflow-hidden">
-        {/* Sidebar responsivo (cajón en móvil, fijo en desktop) */}
-        {view !== 'customer' && (
-          <Sidebar currentView={view} setView={navigateTo} isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        )}
+        <Sidebar
+          currentView={view}
+          setView={navigateTo}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+        />
 
         {/* Backdrop para cerrar el sidebar en móvil */}
-        {view !== 'customer' && sidebarOpen && (
+        {sidebarOpen && (
           <div
             onClick={() => setSidebarOpen(false)}
             className="fixed inset-0 bg-black/40 z-30 md:hidden transition-opacity duration-300"
           />
         )}
 
-        <div className={`flex-1 flex flex-col h-screen relative overflow-hidden ${view !== 'customer' ? 'md:ml-64' : ''}`}>
-          {view !== 'customer' && (
-            <TopBar currentView={view} setView={navigateTo} onOpenSidebar={() => setSidebarOpen(true)} />
-          )}
+        <div className="flex-1 flex flex-col h-screen relative overflow-hidden md:ml-64">
+          <TopBar
+            currentView={view}
+            setView={navigateTo}
+            onOpenSidebar={() => setSidebarOpen(true)}
+          />
 
           <main className="flex-1 overflow-y-auto">
             {view === 'pos'       && <PosView />}
-            {view === 'customer'  && <CustomerMenuView onBack={() => navigateTo('pos')} />}
             {view === 'orders'    && <OrdersView />}
             {view === 'kitchen'   && <KitchenView />}
             {view === 'inventory' && <InventoryView />}
@@ -65,7 +86,7 @@ export default function App() {
             {view === 'reports'   && <ReportsView />}
 
             {/* Vista 404 */}
-            {!VIEWS.includes(view) && (
+            {!SYSTEM_VIEWS.includes(view) && (
               <div className="flex flex-col items-center justify-center h-full gap-6 p-8 text-center">
                 <div className="text-9xl font-black text-outline-variant select-none">404</div>
                 <div>
@@ -87,4 +108,12 @@ export default function App() {
       </div>
     </ToastProvider>
   );
+}
+
+// ── Root: decide qué app mostrar según la URL ────────────────────────────────
+export default function App() {
+  if (isCustomerWindow()) {
+    return <CustomerApp />;
+  }
+  return <SystemApp />;
 }

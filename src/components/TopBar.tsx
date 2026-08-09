@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Search, ChefHat, Menu, Monitor } from 'lucide-react';
+import { Bell, Search, ChefHat, Menu, Monitor, Copy, Check } from 'lucide-react';
 
 interface TopBarProps {
   currentView: string;
@@ -19,6 +19,7 @@ const LABELS: Record<string, string> = {
 
 export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarProps) {
   const [hora, setHora] = useState('');
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const tick = () =>
@@ -32,6 +33,30 @@ export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarPr
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
+
+  const copyCustomerLink = () => {
+    const url = `${window.location.origin}/?view=menu`;
+    // navigator.clipboard solo funciona en HTTPS.
+    // Usamos el método legacy (execCommand) que funciona en HTTP y HTTPS.
+    try {
+      const el = document.createElement('textarea');
+      el.value = url;
+      el.style.position = 'fixed';
+      el.style.top = '-9999px';
+      el.style.left = '-9999px';
+      document.body.appendChild(el);
+      el.focus();
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Si aun así falla, mostrar el link en un prompt para copiarlo manualmente
+      window.prompt('Copia este link para compartir con los clientes:', url);
+    }
+  };
+
 
   return (
     <header className="bg-white border-b border-outline-variant sticky top-0 z-30 flex justify-between items-center w-full px-6 h-14 shrink-0 shadow-sm">
@@ -62,24 +87,31 @@ export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarPr
 
       {/* ── Acciones ──────────────────────────────────────── */}
       <div className="flex items-center gap-2">
-        {/* Botón Pantalla Cliente (Abre en nueva pestaña / monitor secundario) */}
-        <div className="flex items-center gap-1 bg-amber-50 p-1 rounded-xl border border-amber-300 shadow-sm">
+
+        {/* Grupo: Pantalla Cliente + Copiar Link */}
+        <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-xl p-1 shadow-sm">
           <button
-            onClick={() => window.open('/?view=customer', '_blank', 'noopener,noreferrer')}
-            title="Abrir en un monitor secundario o nueva pestaña para el cliente"
-            className="flex items-center gap-1.5 bg-amber-500 text-white hover:bg-amber-600 font-extrabold px-3 py-1 rounded-lg text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
+            onClick={() => window.open('/?view=menu', '_blank', 'width=1024,height=768,noopener,noreferrer')}
+            title="Abrir menú cliente en ventana separada para monitor externo o tablet"
+            className="flex items-center gap-1.5 bg-amber-500 text-white hover:bg-amber-600 font-extrabold px-3 py-1.5 rounded-lg text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
           >
-            <Monitor size={15} />
+            <Monitor size={14} />
             <span>Pantalla Cliente ↗</span>
           </button>
           <button
-            onClick={() => setView('customer')}
-            title="Ver pantalla cliente en esta misma pestaña"
-            className="text-[11px] font-bold text-amber-800 hover:text-amber-950 px-2 py-1 rounded hover:bg-amber-100/60 transition-colors"
+            onClick={copyCustomerLink}
+            title="Copiar link del menú cliente para enviar a los clientes"
+            className={`flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-lg text-xs transition-all active:scale-95 cursor-pointer ${
+              copied
+                ? 'bg-emerald-500 text-white'
+                : 'bg-white text-amber-700 hover:bg-amber-100 border border-amber-300'
+            }`}
           >
-            (Ver aquí)
+            {copied ? <Check size={13} /> : <Copy size={13} />}
+            <span>{copied ? '¡Copiado!' : 'Copiar Link'}</span>
           </button>
         </div>
+
 
         {/* Búsqueda global */}
         <div className="relative hidden xl:block">

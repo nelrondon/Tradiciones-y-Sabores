@@ -13,6 +13,9 @@ const IVA_RATE = 0.16;
 /** Número WhatsApp del restaurante, configurable en .env.local */
 const WA_NUMERO = import.meta.env.VITE_WHATSAPP_NUMERO ?? '584140000000';
 
+/** Genera un número de ticket único basado en timestamp */
+const nuevoTicketId = () => `T-${Date.now().toString(36).toUpperCase().slice(-6)}`;
+
 // ── Tipos locales ─────────────────────────────────────────────────────────────
 
 interface ItemCarrito {
@@ -116,26 +119,31 @@ export default function PosView() {
   const [activeMobileTab, setActiveMobileTab] = useState<'catalog' | 'cart'>('catalog');
 
   // ── Fetch catálogo ──
+  // ── Fetch catálogo ──
   useEffect(() => {
     api.getProductos()
       .then((data) => {
-        setProductos(data);
-        if (data.length > 0) setCategoriaActiva(data[0].categoria);
+        const safeData = Array.isArray(data) ? data : [];
+        setProductos(safeData);
+        if (safeData.length > 0 && safeData[0]?.categoria) {
+          setCategoriaActiva(safeData[0].categoria);
+        }
       })
-      .catch((e: Error) => setErrorProductos(e.message))
+      .catch((e: Error) => setErrorProductos(e?.message ?? 'Error al cargar productos'))
       .finally(() => setLoadingProductos(false));
   }, []);
 
   // ── Derivados ──
-  const categorias = [...new Set(productos.map((p) => p.categoria))] as string[];
-  const productosFiltrados = productos
-    .filter((p) => p.categoria === categoriaActiva)
+  const safeProds = Array.isArray(productos) ? productos : [];
+  const categorias = [...new Set(safeProds.map((p) => p?.categoria ?? 'plato_principal'))] as string[];
+  const productosFiltrados = safeProds
+    .filter((p) => (p?.categoria ?? 'plato_principal') === categoriaActiva)
     .filter((p) =>
       busqueda === '' ||
-      p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-      (p.descripcion ?? '').toLowerCase().includes(busqueda.toLowerCase())
+      (p?.nombre ?? '').toLowerCase().includes(busqueda.toLowerCase()) ||
+      (p?.descripcion ?? '').toLowerCase().includes(busqueda.toLowerCase())
     );
-  const subtotal = carrito.reduce((s, i) => s + i.producto.precio * i.cantidad, 0);
+  const subtotal = (Array.isArray(carrito) ? carrito : []).reduce((s, i) => s + (Number(i?.producto?.precio) || 0) * (Number(i?.cantidad) || 0), 0);
   const iva = subtotal * IVA_RATE;
   const total = subtotal + iva;
 

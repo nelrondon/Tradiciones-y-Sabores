@@ -1,7 +1,6 @@
 import {
   ChefHat,
   PlusCircle,
-  LayoutDashboard,
   ReceiptText,
   Utensils,
   Package,
@@ -10,7 +9,6 @@ import {
   Settings,
   LogOut,
   X,
-  Smartphone,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -21,8 +19,6 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { id: 'pos',       label: 'Nuevo Pedido', icon: LayoutDashboard },
-  { id: 'customer',  label: 'Pantalla Cliente', icon: Smartphone },
   { id: 'orders',    label: 'Pedidos',      icon: ReceiptText },
   { id: 'kitchen',   label: 'Cocina',       icon: Utensils },
   { id: 'inventory', label: 'Inventario',   icon: Package },

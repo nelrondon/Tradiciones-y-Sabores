@@ -13,7 +13,8 @@
 
 | Recurso / Módulo | URL de Acceso | Descripción |
 |---|---|---|
-| 🍽️ **Aplicación Web Principal (Puerto 80)** | **`http://15.235.37.152/`** | Interfaz completa (POS, Cocina, Inventario, Pantalla Cliente) |
+| 🍽️ **Aplicación Web Principal (Puerto 80)** | **`http://15.235.37.152/`** | Interfaz del personal (POS, Cocina, Pedidos, Inventario, Proveedores, Reportes) |
+| 📱 **Menú Digital para Clientes** | **`http://15.235.37.152/?view=menu`** | Vista pública de clientes (Menú digital, pedido autoservicio y búsqueda por Cédula) |
 | 📚 **Documentación Interactiva API (Swagger)** | **`http://15.235.37.152:5000/docs`** | Documentación y prueba de endpoints FastAPI |
 | 🔍 **Verificación de Estado de la BD** | **`http://15.235.37.152:5000/api/debug`** | Diagnóstico en tiempo real de la base de datos |
 | 🛠️ **Panel de Administración (Portainer)** | **`https://15.235.37.152:9443/`** | Panel gráfico de Docker (Stack `tradiciones-sabores`) |
@@ -64,9 +65,9 @@ El proyecto está diseñado e implementado bajo una arquitectura de **3 capas ai
 ## 📦 Módulos del Sistema
 
 1. 🛒 **Punto de Venta (POS / Caja):** Selección de platos, filtro por categorías, tipos de pedido (Mesa, Pickup, Delivery), comanda imprimible y cálculo de IVA (16%).
-2. 🖥️ **Pantalla Cliente (Menú Digital Autoservicio):** Vista pública para clientes con catálogo interactivo y seguimiento en tiempo real del estado de la orden (📌 *Recibido* ➔ 🔥 *En Cocina* ➔ ✅ *Listo / Despachado*).
+2. 📱 **Pantalla Cliente (Menú Digital Autoservicio & Consulta por Cédula):** Vista pública aislada para clientes (`/?view=menu`) con catálogo interactivo, pedido autoservicio, seguimiento en tiempo real (📌 *Recibido* ➔ 🔥 *En Cocina* ➔ ✅ *Listo / Despachado*) y consulta de órdenes históricas mediante Cédula.
 3. 🔥 **Panel de Cocina (KDS):** Tablero para cocineros con alertas de sonido e indicadores visuales de pedidos en espera y en preparación.
-4. 📋 **Gestión de Pedidos:** Historial completo de tickets, filtro por fechas/estados y cancelación de órdenes.
+4. 📋 **Gestión de Pedidos (Buscador Multi-Campo):** Historial completo de tickets con buscador inteligente en tiempo real por Cédula, Nombre de cliente, Número de ticket o Teléfono, filtro por estados y cancelación de órdenes.
 5. 📦 **Gestión de Inventario (Almacén):** Control de existencias de ingredientes/insumos, alerta visual de stock bajo (`stock <= stock_minimo`), unidades de medida y protección contra fallos.
 6. 🚚 **Gestión de Proveedores:** Registro completo de proveedores con RIF, empresas y datos de contacto.
 7. 📊 **Reportes y Analytics:** Indicadores de ingresos brutos, total de ventas, tiempo promedio de preparación y exportación de informes.
@@ -93,20 +94,20 @@ Tradiciones-y-Sabores/
 │       └── reportes.py                  ← KPIs y estadísticas del negocio
 │
 ├── src/                                 ← Capa 1: Frontend React / TypeScript
-│   ├── App.tsx                          ← Componente raíz y enrutador de vistas
-│   ├── main.tsx                         ← Punto de montaje React DOM
+│   ├── App.tsx                          ← Componente raíz y enrutador de vistas (Sistema vs Cliente)
+│   ├── main.tsx                         ← Punto de montaje React DOM con Error Boundary
 │   ├── index.css                        ← Estilos globales e industriales
 │   ├── api/
 │   │   └── index.ts                     ← Cliente API con mapeadores y resguardos de datos
 │   ├── components/
 │   │   ├── Sidebar.tsx                  ← Menú de navegación lateral
-│   │   ├── TopBar.tsx                   ← Barra superior con reloj Venezuela y botón Pantalla Cliente
+│   │   ├── TopBar.tsx                   ← Barra superior con reloj, botón Pantalla Cliente ↗ y Copiar Link
 │   │   └── Toast.tsx                    ← Notificaciones globales emergentes
 │   └── views/
 │       ├── PosView.tsx                  ← Punto de venta (POS)
-│       ├── CustomerMenuView.tsx         ← Pantalla Cliente (Menú digital y seguimiento)
+│       ├── CustomerMenuView.tsx         ← Pantalla Cliente (Menú digital y consulta por Cédula)
 │       ├── KitchenView.tsx              ← Tablero KDS de cocina
-│       ├── OrdersView.tsx               ← Historial de órdenes y tickets
+│       ├── OrdersView.tsx               ← Historial de órdenes con buscador multi-campo
 │       ├── InventoryView.tsx            ← Gestión de inventario de insumos
 │       ├── SuppliersView.tsx            ← Directorio de proveedores
 │       └── ReportsView.tsx              ← Reportes y métricas
@@ -115,9 +116,6 @@ Tradiciones-y-Sabores/
 ├── Dockerfile                           ← Dockerfile multi-stage para Frontend Nginx
 ├── nginx.docker.conf                    ← Configuración de servidor Nginx y proxy reverso
 ├── nginx.conf                           ← Configuración Nginx de respaldo
-├── clean_db_orders.py                   ← Script de mantenimiento para vaciar pedidos
-├── reset_orders_db.py                   ← Script de reinicio de base de datos
-├── fix_postgres_remote.py               ← Script de reparación remota de base de datos
 ├── package.json                         ← Dependencias del frontend React/Vite
 ├── tsconfig.json                        ← Configuración TypeScript
 ├── vite.config.ts                       ← Configuración de compilación Vite

@@ -8,6 +8,7 @@
 | Módulo / Recurso | URL |
 |---|---|
 | **Sistema Web Principal (Puerto 80)** | `http://15.235.37.152/` |
+| **Menú Digital para Clientes** | `http://15.235.37.152/?view=menu` |
 | **Documentación de la API (Swagger)** | `http://15.235.37.152:5000/docs` |
 | **Verificación de Base de Datos** | `http://15.235.37.152:5000/api/debug` |
 | **Panel Portainer (Docker UI)** | `https://15.235.37.152:9443/` |

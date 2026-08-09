@@ -1,150 +1,170 @@
-# 🍽️ Tradiciones y Sabores — Sistema de Gestión
+# 🍽️ Tradiciones y Sabores — Sistema de Gestión y POS Multi-Capa
 
-> Sistema web de gestión para restaurante: POS, Cocina, Inventario, Proveedores y Reportes.
+> **Sistema Web Integral de Gestión para Restaurantes:** Punto de Venta (POS), Pantalla Cliente (Menú Digital Autoservicio), Tablero KDS de Cocina, Gestión de Pedidos, Control de Inventario con Alerta de Mínimos, Directorio de Proveedores e Informes Financieros.
+
+[![Despliegue Docker](https://img.shields.io/badge/Despliegue-Portainer%20%7C%20Docker-blue?logo=docker)](http://15.235.37.152/)
+[![Backend FastAPI](https://img.shields.io/badge/Backend-FastAPI%20%7C%20Python-009688?logo=fastapi)](http://15.235.37.152:5000/docs)
+[![Base de Datos](https://img.shields.io/badge/BD-PostgreSQL%2016-336791?logo=postgresql)](http://15.235.37.152:5000/api/debug)
+[![Estado](https://img.shields.io/badge/Estado-Producci%C3%B3n%20100%25%20Operativo-brightgreen)](http://15.235.37.152/)
 
 ---
 
-## ⚠️ PENDIENTE PARA TERMINAR EL DESPLIEGUE EN VERCEL
+## 🌐 Enlaces de Producción (Servidor VPS)
 
-> **Leer esto primero si retomas el proyecto.**
+| Recurso / Módulo | URL de Acceso | Descripción |
+|---|---|---|
+| 🍽️ **Aplicación Web Principal (Puerto 80)** | **`http://15.235.37.152/`** | Interfaz completa (POS, Cocina, Inventario, Pantalla Cliente) |
+| 📚 **Documentación Interactiva API (Swagger)** | **`http://15.235.37.152:5000/docs`** | Documentación y prueba de endpoints FastAPI |
+| 🔍 **Verificación de Estado de la BD** | **`http://15.235.37.152:5000/api/debug`** | Diagnóstico en tiempo real de la base de datos |
+| 🛠️ **Panel de Administración (Portainer)** | **`https://15.235.37.152:9443/`** | Panel gráfico de Docker (Stack `tradiciones-sabores`) |
 
-### Qué falta para que Vercel funcione 100%
+---
 
-El frontend está desplegado en Vercel pero **necesita conectarse al backend de los compañeros**.
-La arquitectura es:
+## 🏗️ Arquitectura de Producción (Despliegue de 3 Capas)
+
+El proyecto está diseñado e implementado bajo una arquitectura de **3 capas aisladas mediante contenedores Docker**, orquestados a través de Docker Compose y Portainer:
 
 ```
-Frontend (Vercel)  →  Backend Node.js (compañeros)  →  PostgreSQL (BD de los compañeros)
++-----------------------------------------------------------------------+
+|                    CAPA 1: FRONTEND (Puerto 80)                       |
+|               React 19 + TypeScript + Vite + Nginx SPA                |
++-----------------------------------------------------------------------+
+                                   |
+                     Peticiones REST /api/v1/
+                                   v
++-----------------------------------------------------------------------+
+|                    CAPA 2: BACKEND (Puerto 5000)                      |
+|               Python 3.12 + FastAPI + Uvicorn ASGI                    |
++-----------------------------------------------------------------------+
+                                   |
+                     Conexión ORM SQLAlchemy
+                                   v
++-----------------------------------------------------------------------+
+|                 CAPA 3: BASE DE DATOS (Puerto 5432)                   |
+|                      PostgreSQL 16 Alpine                             |
++-----------------------------------------------------------------------+
 ```
 
-El frontend NO toca la BD directamente. Solo habla con la API de los compañeros.
+### 1. Capa 1 — Frontend (React 19 + TypeScript + Vite + Nginx)
+- Servido en el puerto **80** mediante Nginx optimizado en Docker.
+- Aplicación de una sola página (SPA) responsiva para Desktop, Tablet y Móviles.
+- Configurado con proxy inverso transparente para enrutar `/api/v1/` hacia el backend.
 
-### Pasos pendientes:
+### 2. Capa 2 — Backend REST API (Python 3.12 + FastAPI + Uvicorn)
+- Corriendo en el puerto **5000**.
+- Enrutamiento RESTful modularizado (`ordenes.py`, `productos.py`, `inventario.py`, `proveedores.py`, `reportes.py`).
+- Creación automática de esquemas de tablas, semillas de catálogo inicial y cálculo automático de IVA (16%).
 
-**1. Pedirle a los compañeros del backend:**
-- [ ] ¿En qué URL/IP tienen corriendo el backend Node.js? (ej: `http://1.2.3.4:3000`)
-- [ ] ¿Cuál es la `API_KEY` que configuraron en su `.env`?
-
-**2. Ir a Vercel → Settings → Environment Variables y agregar:**
-
-| Variable | Valor que te pasan los compañeros |
-|---|---|
-| `VITE_API_URL` | URL del backend (ej: `http://1.2.3.4:3000`) |
-| `VITE_API_KEY` | La API Key del backend de los compañeros |
-
-**3. Hacer Redeploy en Vercel** después de guardar las variables.
-
-### ¿Por qué falta esto?
-Los compañeros manejan su propio backend y BD.
-Sin la URL y API Key de ellos, el front en Vercel no sabe a dónde enviar las peticiones.
+### 3. Capa 3 — Base de Datos (PostgreSQL 16 Alpine)
+- Corriendo en el puerto **5432** con datos persistentes en volumen Docker (`tradiciones-sabores_postgres_data`).
+- Esquema de producción relacional con 7 tablas automáticas (`plato`, `mesa`, `cliente`, `insumo`, `proveedor`, `pedido`, `item_pedido`).
 
 ---
 
-## 🛠️ Stack Tecnológico
+## 📦 Módulos del Sistema
 
-| Capa | Tecnología |
-|------|-----------|
-| **Frontend** | React 19 · TypeScript · Vite 6 · Tailwind CSS 4 |
-| **Backend** | Node.js · Express (manejado por equipo de BD) |
-| **Base de datos** | PostgreSQL 15+ (manejada por equipo de BD) |
-| **Despliegue frontend** | Vercel |
-
-**Diseño:** Responsivo — funciona en desktop, tablet y móvil
-
----
-
-## 📦 Módulos
-
-| Módulo | Usuarios | Función |
-|--------|---------|---------||
-| **POS — Caja** | Cajeros | Catálogo, carrito, tipos de pedido, WhatsApp |
-| **Cocina** | Cocineros | Órdenes activas, cambio de estado, sonido de alerta |
-| **Pedidos** | Supervisores | Historial completo, cancelar órdenes |
-| **Inventario** | Almacén | CRUD de stock con alertas de mínimos |
-| **Proveedores** | Compras | CRUD del directorio con RIF y contacto |
-| **Reportes** | Gerencia | KPIs, ingresos, exportar CSV |
+1. 🛒 **Punto de Venta (POS / Caja):** Selección de platos, filtro por categorías, tipos de pedido (Mesa, Pickup, Delivery), comanda imprimible y cálculo de IVA (16%).
+2. 🖥️ **Pantalla Cliente (Menú Digital Autoservicio):** Vista pública para clientes con catálogo interactivo y seguimiento en tiempo real del estado de la orden (📌 *Recibido* ➔ 🔥 *En Cocina* ➔ ✅ *Listo / Despachado*).
+3. 🔥 **Panel de Cocina (KDS):** Tablero para cocineros con alertas de sonido e indicadores visuales de pedidos en espera y en preparación.
+4. 📋 **Gestión de Pedidos:** Historial completo de tickets, filtro por fechas/estados y cancelación de órdenes.
+5. 📦 **Gestión de Inventario (Almacén):** Control de existencias de ingredientes/insumos, alerta visual de stock bajo (`stock <= stock_minimo`), unidades de medida y protección contra fallos.
+6. 🚚 **Gestión de Proveedores:** Registro completo de proveedores con RIF, empresas y datos de contacto.
+7. 📊 **Reportes y Analytics:** Indicadores de ingresos brutos, total de ventas, tiempo promedio de preparación y exportación de informes.
 
 ---
 
-## 🚀 Correr localmente (solo frontend)
-
-### Requisitos
-- Node.js 18+
-
-### 1. Instalar dependencias
-```bash
-npm install
-```
-
-### 2. Crear archivo `.env` en la raíz del proyecto
-```env
-# URL del backend de los compañeros (pídela a ellos)
-VITE_API_URL=http://localhost:3000
-
-# API Key del backend de los compañeros (pídela a ellos)
-VITE_API_KEY=tu_api_key_aqui
-
-# WhatsApp del restaurante (con código de país, sin signos)
-VITE_WHATSAPP_NUMERO=584140000000
-```
-
-### 3. Correr el dev server
-```bash
-npm run dev
-# Disponible en http://localhost:5173
-```
-
----
-
-## 🔌 API del backend (endpoints de los compañeros)
-
-El frontend consume la API de los compañeros en `/api/v1/...`
-
-| Método | Endpoint | Auth | Descripción |
-|--------|---------|------|-------------|
-| `GET`  | `/api/v1/ordenes` | Pública | Todas las órdenes |
-| `GET`  | `/api/v1/ordenes?estatus=activo` | Pública | Órdenes activas (cocina) |
-| `POST` | `/api/v1/ordenes` | Pública | Crear nueva orden |
-| `PUT`  | `/api/v1/ordenes/{id}` | Pública | Cambiar estado |
-| `DELETE` | `/api/v1/ordenes/{id}` | Pública | Cancelar orden (soft-delete) |
-| `GET`  | `/api/v1/platos` | `x-api-key` | Catálogo de platos |
-| `GET`  | `/api/v1/inventario` | `x-api-key` | Lista de insumos |
-| `POST` | `/api/v1/inventario` | `x-api-key` | Agregar insumo |
-| `PUT`  | `/api/v1/inventario/{id}` | `x-api-key` | Editar insumo |
-| `DELETE` | `/api/v1/inventario/{id}` | `x-api-key` | Eliminar insumo |
-| `GET`  | `/api/v1/reportes/resumen` | `x-api-key` | KPIs del dashboard |
-| `GET`  | `/api/v1/reportes/pedidos` | `x-api-key` | Pedidos con filtros |
-
-> **Nota:** Los endpoints con `x-api-key` requieren el header `x-api-key: <API_KEY>` en cada request.
-> La API Key viene del `.env` del backend de los compañeros.
-
----
-
-## 🗂️ Estructura del proyecto (solo frontend)
+## 🗂️ Estructura Completa del Repositorio
 
 ```
 Tradiciones-y-Sabores/
-├── src/
-│   ├── api/index.ts         ← Capa de comunicación con el backend de los compañeros
-│   ├── components/
-│   │   ├── Sidebar.tsx      ← Navegación lateral
-│   │   ├── TopBar.tsx       ← Barra superior con reloj Venezuela
-│   │   └── Toast.tsx        ← Notificaciones globales
-│   └── views/
-│       ├── PosView.tsx         ← Punto de venta / caja
-│       ├── KitchenView.tsx     ← Tablero de cocina
-│       ├── OrdersView.tsx      ← Historial de pedidos
-│       ├── InventoryView.tsx   ← Inventario
-│       ├── SuppliersView.tsx   ← Proveedores
-│       ├── CustomerMenuView.tsx ← Menú digital para clientes
-│       └── ReportsView.tsx     ← Reportes y KPIs
+├── backend/                             ← Capa 2: API REST Python / FastAPI
+│   ├── database.py                      ← Configuración y conexión PostgreSQL SQLAlchemy
+│   ├── main.py                          ← Punto de entrada FastAPI, CORS, semillas y routers
+│   ├── models.py                        ← Modelos relacionales ORM SQLAlchemy
+│   ├── schemas.py                       ← Esquemas de validación Pydantic v2
+│   ├── Dockerfile                       ← Dockerfile optimizado para Python 3.12
+│   ├── requirements.txt                 ← Dependencias Python (FastAPI, uvicorn, psycopg2-binary, etc.)
+│   ├── tradiciones-sabores-api.service  ← Script de servicio systemd para servidor
+│   └── routers/                         ← Endpoints divididos por módulo
+│       ├── inventario.py                ← CRUD de stock de insumos
+│       ├── ordenes.py                   ← Creación, cambio de estado y eliminación de pedidos
+│       ├── productos.py                 ← Catálogo de platos y precios
+│       ├── proveedores.py               ← Registro de proveedores
+│       └── reportes.py                  ← KPIs y estadísticas del negocio
 │
-├── .env.example             ← Variables de entorno necesarias
-├── index.html               ← Punto de entrada HTML
-├── vite.config.ts           ← Config de Vite
-└── package.json
+├── src/                                 ← Capa 1: Frontend React / TypeScript
+│   ├── App.tsx                          ← Componente raíz y enrutador de vistas
+│   ├── main.tsx                         ← Punto de montaje React DOM
+│   ├── index.css                        ← Estilos globales e industriales
+│   ├── api/
+│   │   └── index.ts                     ← Cliente API con mapeadores y resguardos de datos
+│   ├── components/
+│   │   ├── Sidebar.tsx                  ← Menú de navegación lateral
+│   │   ├── TopBar.tsx                   ← Barra superior con reloj Venezuela y botón Pantalla Cliente
+│   │   └── Toast.tsx                    ← Notificaciones globales emergentes
+│   └── views/
+│       ├── PosView.tsx                  ← Punto de venta (POS)
+│       ├── CustomerMenuView.tsx         ← Pantalla Cliente (Menú digital y seguimiento)
+│       ├── KitchenView.tsx              ← Tablero KDS de cocina
+│       ├── OrdersView.tsx               ← Historial de órdenes y tickets
+│       ├── InventoryView.tsx            ← Gestión de inventario de insumos
+│       ├── SuppliersView.tsx            ← Directorio de proveedores
+│       └── ReportsView.tsx              ← Reportes y métricas
+│
+├── docker-compose.yml                   ← Orquestador de 3 capas Docker
+├── Dockerfile                           ← Dockerfile multi-stage para Frontend Nginx
+├── nginx.docker.conf                    ← Configuración de servidor Nginx y proxy reverso
+├── nginx.conf                           ← Configuración Nginx de respaldo
+├── clean_db_orders.py                   ← Script de mantenimiento para vaciar pedidos
+├── reset_orders_db.py                   ← Script de reinicio de base de datos
+├── fix_postgres_remote.py               ← Script de reparación remota de base de datos
+├── package.json                         ← Dependencias del frontend React/Vite
+├── tsconfig.json                        ← Configuración TypeScript
+├── vite.config.ts                       ← Configuración de compilación Vite
+├── README.md                            ← Documentación oficial del proyecto
+└── ENTREGA.md                           ← Informe técnico de entrega
 ```
 
 ---
 
-*Versión 2.0.0 — Agosto 2026 — Tradiciones y Sabores*
+## 🔌 Referencia de Endpoints de la API (`/api/v1/...`)
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `GET` | `/api/v1/platos` | Lista el catálogo de platos del restaurante |
+| `GET` | `/api/v1/ordenes` | Obtiene el listado de pedidos activos |
+| `POST` | `/api/v1/ordenes` | Registra un nuevo pedido en PostgreSQL |
+| `PUT` | `/api/v1/ordenes/{id}` | Actualiza el estado del pedido (*recibido*, *preparando*, *listo*) |
+| `DELETE` | `/api/v1/ordenes/{id}` | Cancela/elimina un pedido |
+| `GET` | `/api/v1/inventario` | Obtiene la lista de insumos e ingredientes en stock |
+| `POST` | `/api/v1/inventario` | Agrega un nuevo ítem al inventario |
+| `PUT` | `/api/v1/inventario/{id}` | Actualiza el stock o costo de un ítem |
+| `DELETE` | `/api/v1/inventario/{id}` | Elimina un ítem del inventario |
+| `GET` | `/api/v1/proveedores` | Obtiene el directorio de proveedores |
+| `GET` | `/api/v1/reportes/resumen` | Retorna los KPIs de ingresos y totales |
+
+---
+
+## 🚀 Ejecución Local
+
+### 1. Clonar el repositorio
+```bash
+git clone https://github.com/teofilobetancourt/Tradiciones-y-Sabores.git
+cd Tradiciones-y-Sabores
+```
+
+### 2. Ejecutar mediante Docker Compose (Recomendado)
+```bash
+docker compose up --build -d
+```
+Accede localmente a:
+- **Frontend:** `http://localhost:80`
+- **Backend API:** `http://localhost:5000/docs`
+- **PostgreSQL:** `localhost:5432`
+
+---
+
+## 📄 Licencia y Autores
+
+Proyecto desarrollado para el restaurante **Tradiciones y Sabores**.  
+*Versión 2.0.0 — Agosto 2026*

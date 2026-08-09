@@ -34,7 +34,20 @@ services:
     depends_on:
       - postgres
 
+  # ── Capa 1: Frontend (Nginx + React SPA) ───────────────────
+  frontend:
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    container_name: tradiciones_sabores_frontend
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
 volumes:
   postgres_data:
+
 
 

@@ -22,7 +22,7 @@ interface SidebarProps {
 
 const navItems = [
   { id: 'pos',       label: 'Nuevo Pedido', icon: LayoutDashboard },
-  { id: 'customer',  label: 'Menú Cliente', icon: Smartphone },
+  { id: 'customer',  label: 'Pantalla Cliente', icon: Smartphone },
   { id: 'orders',    label: 'Pedidos',      icon: ReceiptText },
   { id: 'kitchen',   label: 'Cocina',       icon: Utensils },
   { id: 'inventory', label: 'Inventario',   icon: Package },

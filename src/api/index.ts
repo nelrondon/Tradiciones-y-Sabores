@@ -141,14 +141,15 @@ function normalizePlato(p: any): Producto {
 /** Normaliza un Insumo (backend devuelve snake_case) */
 function normalizeInsumo(i: any): ItemInventario {
   return {
-    id_insumos:       i.id_insumos,
-    id_inventario:    i.id_insumos,
-    nombre_insumo:    i.nombre_insumo,
-    nombre:           i.nombre_insumo,
-    stock_actual:     Number(i.stock_actual ?? 0),
-    stock:            Number(i.stock_actual ?? 0),
-    unidad_medida:    i.unidad_medida,
-    unidad:           i.unidad_medida,
+    id_insumos:       i.id_insumos ?? i.id_inventario ?? 0,
+    id_inventario:    i.id_inventario ?? i.id_insumos ?? 0,
+    nombre_insumo:    i.nombre_insumo ?? i.nombre ?? 'Sin nombre',
+    nombre:           i.nombre ?? i.nombre_insumo ?? 'Sin nombre',
+    stock_actual:     Number(i.stock_actual ?? i.stock ?? 0),
+    stock:            Number(i.stock ?? i.stock_actual ?? 0),
+    unidad_medida:    i.unidad_medida ?? i.unidad ?? 'Kg',
+    unidad:           i.unidad ?? i.unidad_medida ?? 'Kg',
+    precio_costo:     Number(i.precio_costo ?? i.precio ?? 0),
     stock_minimo:     Number(i.stock_minimo ?? 0),
     punto_reorden:    Number(i.punto_reorden ?? 0),
     fk_id_categoria:  i.fk_id_categoria ?? undefined,

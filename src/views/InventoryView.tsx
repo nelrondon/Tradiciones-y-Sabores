@@ -198,7 +198,7 @@ export default function InventoryView() {
     }
   };
 
-  const stockBajoCount = items.filter((i) => i.stock <= i.stock_minimo).length;
+  const stockBajoCount = items.filter((i) => Number(i.stock ?? i.stock_actual ?? 0) <= Number(i.stock_minimo ?? 0)).length;
 
   return (
     <div className="p-8 flex-1 flex flex-col gap-6 max-w-[1400px] mx-auto w-full">
@@ -264,22 +264,28 @@ export default function InventoryView() {
                   </td>
                 </tr>
               ) : (
-                items.map((item) => {
-                  const bajo = item.stock <= item.stock_minimo;
+                items.map((item, idx) => {
+                  const itemId = item.id_inventario ?? item.id_insumos ?? (idx + 1);
+                  const nombreItem = item.nombre ?? item.nombre_insumo ?? 'Ítem de Inventario';
+                  const stockVal = Number(item.stock ?? item.stock_actual ?? 0);
+                  const minVal = Number(item.stock_minimo ?? 0);
+                  const unidadVal = item.unidad ?? item.unidad_medida ?? 'unidad';
+                  const costoVal = Number(item.precio_costo ?? 0);
+                  const bajo = stockVal <= minVal;
                   return (
                     <tr
-                      key={item.id_inventario}
+                      key={itemId}
                       className={`border-b border-outline-variant/50 last:border-0 hover:bg-surface-container-low transition-colors fade-in-up ${bajo ? 'bg-error-container/10' : ''}`}
                     >
-                      <td className="p-4 font-bold text-on-surface">{item.nombre}</td>
+                      <td className="p-4 font-bold text-on-surface">{nombreItem}</td>
                       <td className="p-4 text-center">
                         <span className={`font-mono font-black text-xl ${bajo ? 'text-error' : 'text-primary'}`}>
-                          {item.stock}
+                          {stockVal}
                         </span>
                       </td>
-                      <td className="p-4 text-center text-on-surface-variant text-sm">{item.unidad}</td>
-                      <td className="p-4 text-center font-mono text-on-surface-variant">{item.stock_minimo}</td>
-                      <td className="p-4 font-mono">${item.precio_costo.toFixed(2)}</td>
+                      <td className="p-4 text-center text-on-surface-variant text-sm">{unidadVal}</td>
+                      <td className="p-4 text-center font-mono text-on-surface-variant">{minVal}</td>
+                      <td className="p-4 font-mono">${costoVal.toFixed(2)}</td>
                       <td className="p-4">
                         {bajo ? (
                           <span className="inline-flex items-center gap-1 bg-error-container text-on-error-container text-xs font-bold px-2 py-1 rounded">
@@ -300,11 +306,11 @@ export default function InventoryView() {
                             <Edit2 size={16} />
                           </button>
                           <button
-                            onClick={() => eliminar(item.id_inventario)}
-                            disabled={eliminando === item.id_inventario}
+                            onClick={() => eliminar(itemId)}
+                            disabled={eliminando === itemId}
                             className="text-on-surface-variant hover:text-error transition-colors p-1 disabled:opacity-50"
                           >
-                            {eliminando === item.id_inventario
+                            {eliminando === itemId
                               ? <Loader2 size={16} className="animate-spin" />
                               : <Trash2 size={16} />}
                           </button>

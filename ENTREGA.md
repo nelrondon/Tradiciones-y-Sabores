@@ -1,106 +1,66 @@
-# 🍽️ Tradiciones y Sabores — Sistema de Gestión
-**Versión:** 1.0.0 | **Julio 2026**
+# 🍽️ Tradiciones y Sabores — Informe de Entrega de Producción
+**Versión:** 2.0.0 | **Agosto 2026**
 
 ---
 
-## 🌐 Acceso al sistema
+## 🌐 Acceso al Sistema de Producción
 
-**URL del sistema:**
-```
-http://tradicionesysabores.158.220.100.226.nip.io
-```
-
-**Documentación de la API (Swagger):**
-```
-http://tradicionesysabores.158.220.100.226.nip.io/api/docs
-```
+| Módulo / Recurso | URL |
+|---|---|
+| **Sistema Web Principal (Puerto 80)** | `http://15.235.37.152/` |
+| **Documentación de la API (Swagger)** | `http://15.235.37.152:5000/docs` |
+| **Verificación de Base de Datos** | `http://15.235.37.152:5000/api/debug` |
+| **Panel Portainer (Docker UI)** | `https://15.235.37.152:9443/` |
 
 ---
 
-## 🛠️ Stack Tecnológico
+## 🛠️ Stack Tecnológico de Producción
 
-### Frontend
+### 1. Frontend (Capa 1)
 | Tecnología | Versión | Rol |
 |-----------|---------|-----|
 | **React** | 19 | Framework de UI — componentes reutilizables |
-| **TypeScript** | 5.x | Lenguaje tipado (superconjunto de JavaScript) |
-| **Vite** | 6.x | Compilador y servidor de desarrollo |
-| **Tailwind CSS** | 4.x | Framework de estilos utilitarios |
+| **TypeScript** | 5.x | Lenguaje tipado |
+| **Vite** | 6.x | Compilador y empaquetador de producción |
+| **Vanilla / Tailwind CSS** | 4.x | Framework de estilos utilitarios e industriales |
 | **Lucide React** | — | Librería de íconos SVG |
-
-**Lenguaje:** TypeScript (`.tsx`)  
-**Diseño:** Responsivo — funciona en desktop, tablet y móvil
+| **Nginx** | 1.27 / Alpine | Servidor web HTTP y proxy reverso |
 
 ---
 
-### Backend
+### 2. Backend (Capa 2)
 | Tecnología | Versión | Rol |
 |-----------|---------|-----|
-| **Python** | 3.11+ | Lenguaje del servidor |
-| **FastAPI** | 0.110+ | Framework REST — define todos los endpoints `/api/` |
-| **SQLAlchemy** | 2.x | ORM — mapea las tablas PostgreSQL a objetos Python |
-| **Pydantic** | 2.x | Validación automática del JSON entrante |
-| **Uvicorn** | — | Servidor ASGI — ejecuta FastAPI en el puerto 5000 |
-
-**Lenguaje:** Python (`.py`)  
-**Patrón:** API REST — respuestas en JSON
+| **Python** | 3.12 | Lenguaje de programación backend |
+| **FastAPI** | 0.110+ | Framework REST para endpoints `/api/v1/` |
+| **SQLAlchemy** | 2.x | ORM — mapeo de tablas relacionales en PostgreSQL |
+| **Pydantic** | 2.x | Validación automática del JSON |
+| **Uvicorn** | — | Servidor ASGI — ejecuta la API en el puerto 5000 |
 
 ---
 
-### Base de Datos
+### 3. Base de Datos (Capa 3)
 | Tecnología | Rol |
 |-----------|-----|
-| **PostgreSQL 15+** | Motor relacional — almacena todos los datos del restaurante |
-| **SQL** | Las tablas se crean automáticamente al arrancar el backend |
+| **PostgreSQL 16 Alpine** | Motor relacional — almacena todos los datos de produccion |
+| **SQL / Auto-Migración** | Esquema automático creado al iniciar la API |
 
-**Tablas:** `PEDIDO` · `ITEM_PEDIDO` · `PRODUCTO` · `INVENTARIO` · `PROVEEDOR`
-
----
-
-### Infraestructura
-| Tecnología | Rol |
-|-----------|-----|
-| **Nginx** | Servidor web — sirve el frontend y hace proxy de `/api/` al backend |
-| **systemd** | Mantiene el backend activo y lo reinicia si falla |
-| **Linux (Ubuntu/Debian)** | Sistema operativo del servidor VPS |
-| **nip.io** | DNS automático — convierte la IP en un link accesible |
-
-**Servidor:** `158.220.100.226`
+**Tablas Relacionales:** `plato` · `mesa` · `cliente` · `insumo` · `proveedor` · `pedido` · `item_pedido`
 
 ---
 
-### Integraciones
-| Integración | Estado | Rol |
-|------------|--------|-----|
-| **WhatsApp** (wa.me) | ✅ Activo | El POS genera el mensaje y el cajero lo envía |
-| **WhatsApp Business API** | 🔄 Pendiente (equipo n8n) | Envío automático sin intervención del cajero |
-| **n8n** | 🔄 Pendiente (equipo n8n) | Motor de automatización del flujo de WhatsApp |
-| **PostgreSQL** | 🔄 Pendiente (equipo BD) | Almacenamiento de datos de producción |
-
----
-
-## 📦 Módulos del sistema
+## 📦 Módulos del Sistema
 
 | Módulo | Usuarios | Función |
 |--------|---------|---------|
-| **POS — Caja** | Cajeros | Tomar pedidos, calcular totales, enviar a cocina |
-| **Cocina** | Cocineros | Ver órdenes activas, marcar como preparando/listo |
-| **Pedidos** | Supervisores | Historial completo, cancelar órdenes |
-| **Inventario** | Almacén | Gestión de stock con alertas de mínimos |
+| **POS — Caja** | Cajeros | Tomar pedidos, calcular totales con IVA (16%), generar comanda |
+| **Pantalla Cliente** | Clientes / Caja | Menú digital interactivo y seguimiento en vivo del ticket |
+| **Cocina (KDS)** | Cocineros | Ver órdenes activas, marcar como *preparando* / *listo* |
+| **Pedidos** | Supervisores | Historial completo de tickets, cancelar órdenes |
+| **Inventario** | Almacén | Gestión de stock con alertas visuales de mínimos (`stock <= stock_minimo`) |
 | **Proveedores** | Compras | Directorio de proveedores con RIF y contacto |
-| **Reportes** | Gerencia | KPIs, ingresos, exportar CSV |
+| **Reportes** | Gerencia | KPIs, ingresos brutos, tiempo promedio y analítica |
 
 ---
 
-## 📁 Documentos del proyecto
-
-| Archivo | Para quién |
-|---------|-----------|
-| `PARA_EQUIPO_BD.md` | Equipo de Base de Datos |
-| `PARA_EQUIPO_N8N.md` | Equipo de n8n / WhatsApp |
-| `backend/README.md` | Administrador del servidor |
-| `backend/.env.example` | Plantilla de configuración |
-
----
-
-*Stack: React 19 · TypeScript · Vite · Tailwind CSS 4 · Python 3.11 · FastAPI · SQLAlchemy · PostgreSQL · Nginx · systemd · Linux*
+*Despliegue Multi-Capa en Docker — Tradiciones y Sabores — Agosto 2026*

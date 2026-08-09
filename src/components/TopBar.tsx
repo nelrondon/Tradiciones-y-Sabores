@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, Search, ChefHat, Menu } from 'lucide-react';
+import { Bell, Search, ChefHat, Menu, Monitor } from 'lucide-react';
 
 interface TopBarProps {
   currentView: string;
@@ -9,6 +9,7 @@ interface TopBarProps {
 
 const LABELS: Record<string, string> = {
   pos:       'Punto de Venta',
+  customer:  'Pantalla Cliente',
   orders:    'Pedidos',
   kitchen:   'Panel de Cocina',
   inventory: 'Inventario',
@@ -16,7 +17,7 @@ const LABELS: Record<string, string> = {
   reports:   'Reportes y Datos',
 };
 
-export default function TopBar({ currentView, setView: _setView, onOpenSidebar }: TopBarProps) {
+export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarProps) {
   const [hora, setHora] = useState('');
 
   useEffect(() => {
@@ -61,13 +62,22 @@ export default function TopBar({ currentView, setView: _setView, onOpenSidebar }
 
       {/* ── Acciones ──────────────────────────────────────── */}
       <div className="flex items-center gap-2">
+        {/* Botón Pantalla Cliente */}
+        <button
+          onClick={() => setView('customer')}
+          className="flex items-center gap-1.5 bg-amber-50 text-amber-800 hover:bg-amber-100 font-extrabold px-3 py-1.5 rounded-lg border border-amber-300 text-xs transition-all shadow-sm active:scale-95 cursor-pointer"
+        >
+          <Monitor size={15} className="text-amber-600" />
+          <span>Pantalla Cliente</span>
+        </button>
+
         {/* Búsqueda global */}
         <div className="relative hidden xl:block">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
           <input
             type="text"
             placeholder="Buscar pedidos..."
-            className="pl-8 pr-4 h-8 w-52 bg-surface-container-low border border-outline-variant rounded-lg focus:border-secondary-container focus:ring-1 focus:ring-secondary-container/40 outline-none text-xs text-on-surface transition-colors placeholder:text-outline"
+            className="pl-8 pr-4 h-8 w-44 bg-surface-container-low border border-outline-variant rounded-lg focus:border-secondary-container focus:ring-1 focus:ring-secondary-container/40 outline-none text-xs text-on-surface transition-colors placeholder:text-outline"
           />
         </div>
 

@@ -12,7 +12,7 @@ RUN npm run build
 # Stage 2: Serve via Nginx
 FROM nginx:alpine
 
-COPY --from=build /app/dist /var/www/restaurantequis
+COPY --from=build /app/dist /var/www/tradicionesysabores
 COPY nginx.docker.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80

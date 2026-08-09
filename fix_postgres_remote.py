@@ -64,7 +64,7 @@ def main():
     print("\n=== LISTO — PostgreSQL acepta conexiones remotas ===")
     print(f"Host:     {HOST}")
     print("Puerto:   5432")
-    print("DB:       restaurant_equis")
+    print("DB:       tradiciones_sabores")
     print("Usuario:  postgres")
     print("Password: postgres")
 

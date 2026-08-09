@@ -1,4 +1,4 @@
-# 🐍 Restaurant Equis — Backend FastAPI
+# 🐍 Tradiciones y Sabores — Backend FastAPI
 
 Servidor REST que expone todos los endpoints consumidos por el frontend React.
 
@@ -21,19 +21,19 @@ Servidor REST que expone todos los endpoints consumidos por el frontend React.
 
 ```
 backend/
-├── main.py                        ← App FastAPI + CORS + lifespan
-├── database.py                    ← Conexión SQLAlchemy (lee .env)
-├── models.py                      ← Tablas ORM (PostgreSQL)
-├── schemas.py                     ← Validación Pydantic
+├── main.py                          ← App FastAPI + CORS + lifespan
+├── database.py                      ← Conexión SQLAlchemy (lee .env)
+├── models.py                        ← Tablas ORM (PostgreSQL)
+├── schemas.py                       ← Validación Pydantic
 ├── routers/
-│   ├── ordenes.py                 ← GET/POST/PUT /api/ordenes
-│   ├── productos.py               ← GET /api/productos
-│   ├── inventario.py              ← CRUD /api/inventario
-│   ├── proveedores.py             ← CRUD /api/proveedores
-│   └── reportes.py                ← GET /api/reportes/*
-├── .env.example                   ← Plantilla de configuración
-├── requirements.txt               ← Dependencias Python
-└── restaurant-equis-api.service   ← Servicio systemd
+│   ├── ordenes.py                   ← GET/POST/PUT /api/ordenes
+│   ├── productos.py                 ← GET /api/productos
+│   ├── inventario.py                ← CRUD /api/inventario
+│   ├── proveedores.py               ← CRUD /api/proveedores
+│   └── reportes.py                  ← GET /api/reportes/*
+├── .env.example                     ← Plantilla de configuración
+├── requirements.txt                 ← Dependencias Python
+└── tradiciones-sabores-api.service  ← Servicio systemd
 ```
 
 ---
@@ -53,19 +53,19 @@ sudo systemctl enable postgresql
 
 ```bash
 sudo -u postgres psql << 'EOF'
-CREATE DATABASE restaurant_equis;
-CREATE USER equis_user WITH PASSWORD 'TU_CONTRASEÑA_SEGURA';
-GRANT ALL PRIVILEGES ON DATABASE restaurant_equis TO equis_user;
-\c restaurant_equis
-GRANT ALL ON SCHEMA public TO equis_user;
+CREATE DATABASE tradiciones_sabores;
+CREATE USER tradiciones_user WITH PASSWORD 'TU_CONTRASEÑA_SEGURA';
+GRANT ALL PRIVILEGES ON DATABASE tradiciones_sabores TO tradiciones_user;
+\c tradiciones_sabores
+GRANT ALL ON SCHEMA public TO tradiciones_user;
 EOF
 ```
 
 ### Paso 3 — Crear el archivo `.env`
 
 ```bash
-cp /opt/restaurant-equis/backend/.env.example /opt/restaurant-equis/backend/.env
-nano /opt/restaurant-equis/backend/.env
+cp /opt/tradiciones-sabores/backend/.env.example /opt/tradiciones-sabores/backend/.env
+nano /opt/tradiciones-sabores/backend/.env
 ```
 
 Rellenar con los valores reales:
@@ -73,8 +73,8 @@ Rellenar con los valores reales:
 ```env
 DB_HOST=localhost
 DB_PORT=5432
-DB_NAME=restaurant_equis
-DB_USER=equis_user
+DB_NAME=tradiciones_sabores
+DB_USER=tradiciones_user
 DB_PASSWORD=TU_CONTRASEÑA_SEGURA
 API_PORT=5000
 CORS_ORIGINS=http://158.220.100.226,http://localhost:5173
@@ -86,8 +86,8 @@ Una vez que el `.env` esté configurado, avisar para reiniciar el servicio:
 
 ```bash
 # El equipo de backend ejecutará esto:
-sudo systemctl restart restaurant-equis-api
-sudo systemctl status restaurant-equis-api
+sudo systemctl restart tradiciones-sabores-api
+sudo systemctl status tradiciones-sabores-api
 ```
 
 ---
@@ -126,7 +126,7 @@ El script hace automáticamente:
 ## Arranque manual en el servidor (alternativa)
 
 ```bash
-cd /opt/restaurant-equis/backend
+cd /opt/tradiciones-sabores/backend
 source venv/bin/activate
 uvicorn main:app --host 127.0.0.1 --port 5000 --workers 2
 ```
@@ -147,10 +147,10 @@ Una vez corriendo, el backend es accesible en:
 
 ```bash
 # Ver últimas 50 líneas del log
-sudo journalctl -u restaurant-equis-api -n 50
+sudo journalctl -u tradiciones-sabores-api -n 50
 
 # Seguir el log en tiempo real
-sudo journalctl -u restaurant-equis-api -f
+sudo journalctl -u tradiciones-sabores-api -f
 ```
 
 ---
@@ -188,4 +188,4 @@ sudo journalctl -u restaurant-equis-api -f
 
 ---
 
-*Restaurant Equis — Sistema de Gestión v1.0*
+*Tradiciones y Sabores — Sistema de Gestión v1.0*

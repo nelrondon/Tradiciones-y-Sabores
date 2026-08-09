@@ -1,4 +1,4 @@
-# 🍽️ Restaurante Equis — Sistema de Gestión
+# 🍽️ Tradiciones y Sabores — Sistema de Gestión
 **Versión:** 1.0.0 | **Julio 2026**
 
 ---
@@ -7,12 +7,12 @@
 
 **URL del sistema:**
 ```
-http://restauranteequis.158.220.100.226.nip.io
+http://tradicionesysabores.158.220.100.226.nip.io
 ```
 
 **Documentación de la API (Swagger):**
 ```
-http://restauranteequis.158.220.100.226.nip.io/api/docs
+http://tradicionesysabores.158.220.100.226.nip.io/api/docs
 ```
 
 ---

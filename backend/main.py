@@ -1,6 +1,6 @@
 """
 main.py — Punto de entrada del backend FastAPI
-Restaurant Equis — API REST (Integrado con esquema de BD del equipo)
+Tradiciones y Sabores — API REST (Integrado con esquema de BD del equipo)
 """
 import os
 import sys
@@ -29,7 +29,7 @@ def seed_initial_data():
         # 1. Sembrar Platos
         if db.query(Plato).count() == 0:
             platos_seed = [
-                Plato(nombre="Hamburguesa Equis Doble", descripcion="Doble carne 150g, queso cheddar, tocineta, salsa especial", precio=12.50, categoria=CategoriaPlatoEnum.plato_principal),
+                Plato(nombre="Hamburguesa Tradiciones Doble", descripcion="Doble carne 150g, queso cheddar, tocineta, salsa especial", precio=12.50, categoria=CategoriaPlatoEnum.plato_principal),
                 Plato(nombre="Pizza Margherita Artesanal", descripcion="Masa madre, salsa pomodoro, mozzarella fresca, albahaca", precio=14.00, categoria=CategoriaPlatoEnum.plato_principal),
                 Plato(nombre="Tacos de Asada (3 uds)", descripcion="Carne de res marinada, cilantro, cebolla, guacamole", precio=10.00, categoria=CategoriaPlatoEnum.plato_principal),
                 Plato(nombre="Tequeños Tradicionales (6 uds)", descripcion="Rellenos de abundante queso paisa con salsa tártara", precio=6.50, categoria=CategoriaPlatoEnum.entrada),
@@ -59,7 +59,7 @@ def seed_initial_data():
 
         # 3. Sembrar Cliente General
         if db.query(Cliente).count() == 0:
-            db.add(Cliente(cedula_cliente="V-00000000", nombre="Cliente General / Consumidor", telefono="04140000000", email="cliente@equis.com", direccion_habitual="Local"))
+            db.add(Cliente(cedula_cliente="V-00000000", nombre="Cliente General / Consumidor", telefono="04140000000", email="cliente@tradicionesysabores.com", direccion_habitual="Local"))
             db.commit()
             print("🌱 Cliente general creado.")
 
@@ -119,7 +119,7 @@ from fastapi.responses import JSONResponse
 import traceback
 
 app = FastAPI(
-    title="Restaurant Equis — API",
+    title="Tradiciones y Sabores — API",
     description="Backend REST adaptado 100% al esquema de base de datos del equipo.",
     version="1.1.0",
     docs_url="/api/docs",
@@ -161,12 +161,12 @@ app.include_router(reportes.router)
 
 @app.get("/", tags=["Health"])
 def health_root():
-    return {"status": "ok", "servicio": "Restaurant Equis API", "db_integration": "nelrondon/restaurant-bd-tdb"}
+    return {"status": "ok", "servicio": "Tradiciones y Sabores API", "db_integration": "nelrondon/restaurant-bd-tdb"}
 
 
 @app.get("/api/", tags=["Health"])
 def health_api():
-    return {"status": "ok", "servicio": "Restaurant Equis API", "version": "1.1.0"}
+    return {"status": "ok", "servicio": "Tradiciones y Sabores API", "version": "1.1.0"}
 
 
 @app.get("/api/debug", tags=["Health"])

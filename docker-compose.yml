@@ -4,17 +4,37 @@ services:
   # ── Base de Datos PostgreSQL 16 ──────────────────────────────
   postgres:
     image: postgres:16-alpine
-    container_name: restaurant_equis_db
+    container_name: tradiciones_sabores_db
     restart: always
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: restaurant_equis
+      POSTGRES_DB: tradiciones_sabores
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # ── Backend FastAPI Python ──────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: tradiciones_sabores_api
+    restart: always
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tradiciones_sabores
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      CORS_ORIGINS: "*"
+    depends_on:
+      - postgres
+
 volumes:
   postgres_data:
+
 

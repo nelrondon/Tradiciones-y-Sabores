@@ -12,7 +12,7 @@ PORT     = 22
 USER     = "root"
 PASSWORD = "1415162013asd"
 
-REMOTE_DIR = "/opt/restaurant-equis-docker"
+REMOTE_DIR = "/opt/tradiciones-sabores-docker"
 LOCAL_ROOT = os.path.dirname(__file__)
 
 IGNORE_DIRS = {'__pycache__', '.git', 'node_modules', '.venv', 'venv', 'dist', '.antigravityignore'}
@@ -72,7 +72,7 @@ def main():
     print("[OK] Archivos subidos a " + REMOTE_DIR)
 
     # 2. Detener servicios nativos que compitan por los puertos (80, 5000, 5432)
-    run_ssh_cmd(client, "systemctl stop nginx restaurant-equis-api postgresql 2>/dev/null || true", "2. Liberando puertos (deteniendo Nginx/Postgres nativos)")
+    run_ssh_cmd(client, "systemctl stop nginx tradiciones-sabores-api postgresql 2>/dev/null || true", "2. Liberando puertos (deteniendo Nginx/Postgres nativos)")
 
     # 3. Verificar/Instalar Docker y Docker Compose
     install_docker_cmds = (
@@ -101,8 +101,8 @@ def main():
     
     print("\n==================================================")
     print("¡DESPLIEGUE DOCKER COMPLETADO EXITOSAMENTE!")
-    print("URL Frontend: http://restauranteequis.158.220.100.226.nip.io")
-    print("URL API Swagger: http://restauranteequis.158.220.100.226.nip.io/docs")
+    print("URL Frontend: http://tradicionesysabores.158.220.100.226.nip.io")
+    print("URL API Swagger: http://tradicionesysabores.158.220.100.226.nip.io/docs")
     print("==================================================")
 
 if __name__ == "__main__":

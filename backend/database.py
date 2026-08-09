@@ -12,7 +12,7 @@ load_dotenv(override=False)
 
 DB_HOST     = os.getenv("DB_HOST", "localhost").strip()
 DB_PORT     = os.getenv("DB_PORT", "5432").strip()
-DB_NAME     = os.getenv("DB_NAME", "restaurant_equis").strip()
+DB_NAME     = os.getenv("DB_NAME", "tradiciones_sabores").strip()
 DB_USER     = os.getenv("DB_USER", "postgres").strip()
 DB_PASSWORD = os.getenv("DB_PASSWORD", "postgres").strip()
 

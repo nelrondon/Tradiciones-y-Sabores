@@ -123,7 +123,7 @@ El frontend consume la API de los compañeros en `/api/v1/...`
 ## 🗂️ Estructura del proyecto (solo frontend)
 
 ```
-Restaurant-Equis/
+Tradiciones-y-Sabores/
 ├── src/
 │   ├── api/index.ts         ← Capa de comunicación con el backend de los compañeros
 │   ├── components/

@@ -13,8 +13,8 @@ PORT     = 22
 USER     = "root"
 PASSWORD = "1415162013asd"
 
-REMOTE_FRONTEND = "/var/www/restaurantequis"
-REMOTE_BACKEND  = "/opt/restaurant-equis/backend"
+REMOTE_FRONTEND = "/var/www/tradicionesysabores"
+REMOTE_BACKEND  = "/opt/tradiciones-sabores/backend"
 
 LOCAL_FRONTEND  = os.path.join(os.path.dirname(__file__), "dist")
 LOCAL_BACKEND   = os.path.join(os.path.dirname(__file__), "backend")
@@ -68,7 +68,7 @@ def main():
 
     # 3. Subir Nginx Conf
     print("\n--- Subiendo Nginx Conf ---")
-    sftp.put(LOCAL_NGINX_CONF, "/etc/nginx/sites-available/restaurant-equis")
+    sftp.put(LOCAL_NGINX_CONF, "/etc/nginx/sites-available/tradiciones-sabores")
     
     # 4. Configurar entorno Python, .env, systemd y Nginx exclusivo
     print("\n--- Aplicando Configuración y Reiniciando Servicios ---")
@@ -78,13 +78,13 @@ def main():
         "venv/bin/pip install --upgrade pip setuptools -q && "
         "venv/bin/pip install -r requirements.txt psycopg2-binary -q && "
         "if [ ! -f '.env' ]; then cp .env.example .env; fi && "
-        "cp restaurant-equis-api.service /etc/systemd/system/restaurant-equis-api.service && "
+        "cp tradiciones-sabores-api.service /etc/systemd/system/tradiciones-sabores-api.service && "
         "rm -f /etc/nginx/sites-enabled/* && "
-        "ln -sf /etc/nginx/sites-available/restaurant-equis /etc/nginx/sites-enabled/restaurant-equis && "
-        "chown -R www-data:www-data /opt/restaurant-equis && "
+        "ln -sf /etc/nginx/sites-available/tradiciones-sabores /etc/nginx/sites-enabled/tradiciones-sabores && "
+        "chown -R www-data:www-data /opt/tradiciones-sabores && "
         "systemctl daemon-reload && "
-        "systemctl enable restaurant-equis-api && "
-        "systemctl restart restaurant-equis-api && "
+        "systemctl enable tradiciones-sabores-api && "
+        "systemctl restart tradiciones-sabores-api && "
         "sleep 3 && "
         "systemctl restart nginx"
     )
@@ -99,7 +99,7 @@ def main():
     print("\nRespuesta API Backend Local (127.0.0.1:5000/api/):")
     print(stdout.read().decode('utf-8', errors='ignore'))
 
-    stdin, stdout, stderr = client.exec_command("curl -s -H 'Host: restauranteequis.158.220.100.226.nip.io' http://127.0.0.1/api/")
+    stdin, stdout, stderr = client.exec_command("curl -s -H 'Host: tradicionesysabores.158.220.100.226.nip.io' http://127.0.0.1/api/")
     print("\nRespuesta API Nginx Proxy (127.0.0.1/api/):")
     print(stdout.read().decode('utf-8', errors='ignore'))
 
@@ -107,8 +107,8 @@ def main():
     client.close()
     print("\n==================================================")
     print("¡DESPLIEGUE COMPLETO Y SERVICIOS ACTIVOS EN CONTABO VPS!")
-    print("URL Frontend: http://restauranteequis.158.220.100.226.nip.io")
-    print("URL API Swagger: http://restauranteequis.158.220.100.226.nip.io/api/docs")
+    print("URL Frontend: http://tradicionesysabores.158.220.100.226.nip.io")
+    print("URL API Swagger: http://tradicionesysabores.158.220.100.226.nip.io/api/docs")
     print("==================================================")
 
 if __name__ == "__main__":

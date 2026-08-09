@@ -14,7 +14,7 @@ client.connect(HOST, port=PORT, username=USER, password=PASSWORD, timeout=15)
 
 print("=== VACÍO COMPLETO DE TABLAS DE PEDIDOS Y FACTURAS ===")
 reset_sql = """
-su - postgres -c "psql -d restaurant_equis -c '
+su - postgres -c "psql -d tradiciones_sabores -c '
 TRUNCATE TABLE factura, detalle_pedido, pedido RESTART IDENTITY CASCADE;
 '"
 """

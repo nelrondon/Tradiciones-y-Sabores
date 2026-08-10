@@ -1,25 +1,25 @@
-# Stage 1: Build React SPA
-FROM node:20-alpine AS build
+# Etapa 1: Build
+FROM node:20-alpine as build
+
+# Habilitar pnpm
+RUN npm install -g pnpm
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci
+# Instalar dependencias
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install
 
-ARG VITE_API_URL=""
-ARG VITE_API_KEY=""
-ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_API_KEY=$VITE_API_KEY
-
+# Copiar el código fuente y compilar
 COPY . .
-RUN npm run build
+RUN pnpm run build
 
-# Stage 2: Serve via Nginx
-FROM nginx:alpine
+# Etapa 2: Nginx Servidor Web
+FROM nginx:1.25-alpine
 
-COPY --from=build /app/dist /var/www/tradicionesysabores
-COPY nginx.docker.conf /etc/nginx/conf.d/default.conf
+# Copiar la carpeta compilada al directorio esperado por Nginx según el nginx.conf original
+COPY --from=build /app/dist /var/www/html/dist
 
-EXPOSE 80
+EXPOSE 80 443
 
 CMD ["nginx", "-g", "daemon off;"]

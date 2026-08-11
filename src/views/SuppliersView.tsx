@@ -10,6 +10,8 @@ const FORM_INICIAL: FormData = {
   contacto: '',
   telefono: '',
   email: '',
+  ciudad: '',
+  direccion: '',
 };
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
@@ -25,7 +27,7 @@ function ModalProveedor({
   guardando: boolean;
 }) {
   const set = (k: keyof FormData, v: string) => setForm({ ...form, [k]: v });
-  const esValido = form.nombre.trim() && form.rif.trim() && form.telefono.trim();
+  const esValido = form.nombre.trim() && form.rif.trim() && form.telefono.trim() && form.ciudad?.trim() && form.direccion?.trim();
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 fade-in">
@@ -70,6 +72,22 @@ function ModalProveedor({
               <label className="text-xs font-bold text-on-surface-variant uppercase mb-1.5 block">Email</label>
               <input value={form.email} onChange={(e) => set('email', e.target.value)}
                 type="email" className="industrial-input" placeholder="ventas@empresa.com" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-bold text-on-surface-variant uppercase mb-1.5 block">
+                Ciudad <span className="text-error">*</span>
+              </label>
+              <input value={form.ciudad || ''} onChange={(e) => set('ciudad', e.target.value)}
+                className="industrial-input" placeholder="Ej. Caracas" />
+            </div>
+            <div>
+              <label className="text-xs font-bold text-on-surface-variant uppercase mb-1.5 block">
+                Dirección <span className="text-error">*</span>
+              </label>
+              <input value={form.direccion || ''} onChange={(e) => set('direccion', e.target.value)}
+                className="industrial-input" placeholder="Ej. Av. Principal" />
             </div>
           </div>
         </div>
@@ -118,7 +136,7 @@ export default function SuppliersView() {
   const abrirNuevo = () => { setEditando(null); setForm(FORM_INICIAL); setShowModal(true); };
   const abrirEditar = (p: Proveedor) => {
     setEditando(p);
-    setForm({ nombre: p.nombre, rif: p.rif, contacto: p.contacto, telefono: p.telefono, email: p.email ?? '' });
+    setForm({ nombre: p.nombre || '', rif: p.rif || '', contacto: p.contacto || '', telefono: p.telefono || '', email: p.email ?? '', ciudad: p.ciudad ?? '', direccion: p.direccion ?? '' });
     setShowModal(true);
   };
 

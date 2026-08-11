@@ -12,6 +12,15 @@ RUN pnpm install
 
 # Copiar el código fuente y compilar
 COPY . .
+
+ARG VITE_API_URL
+ARG VITE_API_KEY
+ARG VITE_WHATSAPP_NUMERO
+
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_API_KEY=$VITE_API_KEY
+ENV VITE_WHATSAPP_NUMERO=$VITE_WHATSAPP_NUMERO
+
 RUN pnpm run build
 
 # Etapa 2: Nginx Servidor Web

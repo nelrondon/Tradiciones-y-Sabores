@@ -247,6 +247,51 @@ export const api = {
       .then(r => check(r, 'Error cargando catálogo de platos').json())
       .then((rows: any) => (Array.isArray(rows) ? rows : []).map(normalizePlato)),
 
+  // ── Platos / Menú (requiere API key) ─────────────────────
+  getPlatos: (): Promise<Producto[]> =>
+    fetch(`${BASE}/api/v1/platos`, { headers: AUTH_HEADERS })
+      .then(r => check(r, 'Error cargando platos').json())
+      .then((rows: any) => (Array.isArray(rows) ? rows : []).map(normalizePlato)),
+
+  /**
+   * Crea un plato. El backend responde { message, data } y, ante errores de
+   * validación (400), { errors: [{ msg, path }] } — los concatenamos para
+   * mostrarle al usuario qué campo está mal.
+   */
+  crearPlato: (data: {
+    nombre: string;
+    descripcion: string;
+    precio: number;
+    categoria: CategoriaPlato;
+  }): Promise<Producto> =>
+    fetch(`${BASE}/api/v1/platos`, {
+      method:  'POST',
+      headers: AUTH_HEADERS,
+      body: JSON.stringify({
+        nombre:      data.nombre,
+        descripcion: data.descripcion,
+        precio:      Number(data.precio),
+        categoria:   data.categoria,
+      }),
+    }).then(async r => {
+      const body = await r.json().catch(() => null);
+      if (!r.ok) {
+        const detalle = Array.isArray(body?.errors)
+          ? body.errors.map((e: any) => e?.msg).filter(Boolean).join(' · ')
+          : body?.message;
+        throw new Error(detalle || `Error creando el plato (HTTP ${r.status})`);
+      }
+      return normalizePlato(body?.data ?? body);
+    }),
+
+  deletePlato: (id: number): Promise<void> =>
+    fetch(`${BASE}/api/v1/platos/${id}`, { method: 'DELETE', headers: AUTH_HEADERS })
+      .then(async r => {
+        if (r.ok) return;
+        const body = await r.json().catch(() => null);
+        throw new Error(body?.message || `Error eliminando el plato (HTTP ${r.status})`);
+      }),
+
   // ── Inventario (requiere API key) ────────────────────────
   getInventario: (): Promise<ItemInventario[]> =>
     fetch(`${BASE}/api/v1/inventario`, { headers: AUTH_HEADERS })

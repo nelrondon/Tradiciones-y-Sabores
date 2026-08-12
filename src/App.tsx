@@ -5,12 +5,13 @@ import PosView from './views/PosView';
 import KitchenView from './views/KitchenView';
 import ReportsView from './views/ReportsView';
 import InventoryView from './views/InventoryView';
+import PlatesView from './views/PlatesView';
 import SuppliersView from './views/SuppliersView';
 import OrdersView from './views/OrdersView';
 import CustomerMenuView from './views/CustomerMenuView';
 import { ToastProvider } from './components/Toast';
 
-const SYSTEM_VIEWS = ['pos', 'orders', 'kitchen', 'inventory', 'suppliers', 'reports'];
+const SYSTEM_VIEWS = ['pos', 'orders', 'kitchen', 'plates', 'inventory', 'suppliers', 'reports'];
 
 /**
  * Si la URL tiene ?view=menu, esta ventana es SOLO para el cliente.
@@ -81,6 +82,7 @@ function SystemApp() {
             {view === 'pos'       && <PosView />}
             {view === 'orders'    && <OrdersView />}
             {view === 'kitchen'   && <KitchenView />}
+            {view === 'plates'    && <PlatesView />}
             {view === 'inventory' && <InventoryView />}
             {view === 'suppliers' && <SuppliersView />}
             {view === 'reports'   && <ReportsView />}

@@ -12,6 +12,7 @@ const LABELS: Record<string, string> = {
   customer:  'Pantalla Cliente',
   orders:    'Pedidos',
   kitchen:   'Panel de Cocina',
+  plates:    'Platos',
   inventory: 'Inventario',
   suppliers: 'Proveedores',
   reports:   'Reportes y Datos',

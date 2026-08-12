@@ -3,6 +3,7 @@ import {
   PlusCircle,
   ReceiptText,
   Utensils,
+  UtensilsCrossed,
   Package,
   Truck,
   BarChart2,
@@ -21,6 +22,7 @@ interface SidebarProps {
 const navItems = [
   { id: 'orders',    label: 'Pedidos',      icon: ReceiptText },
   { id: 'kitchen',   label: 'Cocina',       icon: Utensils },
+  { id: 'plates',    label: 'Platos',       icon: UtensilsCrossed },
   { id: 'inventory', label: 'Inventario',   icon: Package },
   { id: 'suppliers', label: 'Proveedores',  icon: Truck },
   { id: 'reports',   label: 'Informes',     icon: BarChart2 },

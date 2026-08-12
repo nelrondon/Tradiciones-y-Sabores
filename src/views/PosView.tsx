@@ -572,15 +572,6 @@ export default function PosView() {
           </button>
 
           {carrito.length > 0 && !enviando && (
-            <button
-              onClick={() => window.print()}
-              className="w-full h-9 border border-outline-variant rounded-lg text-xs font-bold text-on-surface-variant hover:bg-surface-variant flex items-center justify-center gap-2 transition-colors"
-            >
-              <Printer size={14} /> Imprimir comanda
-            </button>
-          )}
-
-          {carrito.length > 0 && !enviando && (
             <p className="text-center text-xs text-on-surface-variant flex items-center justify-center gap-1">
               <MessageCircle size={12} /> Se abrirá un enlace de WhatsApp al confirmar
             </p>

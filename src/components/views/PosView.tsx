@@ -529,7 +529,7 @@ export default function PosView() {
             </div>
 
             {/* Campos dinámicos por tipo */}
-            <div className="mt-3 min-h-[52px]">
+            <div className="mt-3">
               {orderType === "mesa" &&
                 (loadingMesas ? (
                   <div className="flex items-center gap-2 text-xs text-on-surface-variant font-medium py-3">
@@ -537,25 +537,12 @@ export default function PosView() {
                     <span>Cargando mesas...</span>
                   </div>
                 ) : mesasOrdenadas.length === 0 ? (
-                  // Sin catálogo de mesas (error de red o salón sin registrar):
-                  // se permite escribir el número a mano para no bloquear la venta.
                   <div className="flex gap-3">
-                    <div className="w-20">
-                      <input
-                        type="number"
-                        value={mesa}
-                        onChange={e => setMesa(e.target.value)}
-                        placeholder="Mesa"
-                        className="industrial-input text-center font-bold"
-                        min={1}
-                      />
-                    </div>
-                    <div className="flex-1 flex items-center gap-2 text-xs text-on-surface-variant font-medium">
+                    <div className="flex-1 flex items-center gap-2 text-xs text-on-surface-variant font-medium py-3">
                       <AlertTriangle size={14} className="shrink-0" />
                       <span>
-                        {errorMesas
-                          ? "No se pudieron cargar las mesas. Ingrese el número manualmente."
-                          : "No hay mesas registradas. Ingrese el número manualmente."}
+                        No hay mesas registradas. Registre al menos una para crear un
+                        pedido de mesa.
                       </span>
                     </div>
                   </div>
@@ -713,7 +700,11 @@ export default function PosView() {
 
           <button
             onClick={procesarPedido}
-            disabled={enviando || carrito.length === 0}
+            disabled={
+              enviando ||
+              carrito.length === 0 ||
+              (orderType === "mesa" && mesasOrdenadas.length === 0)
+            }
             className="w-full h-12 bg-secondary-container text-on-secondary-container text-sm font-black uppercase rounded-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
           >
             {enviando ? (

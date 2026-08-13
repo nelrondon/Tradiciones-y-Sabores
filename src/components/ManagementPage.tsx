@@ -23,7 +23,7 @@ const SYSTEM_VIEWS = [
   "reports"
 ];
 
-export default function ManagementPage() {
+export default function BaseManagementView() {
   const searchParams = useSearchParams();
 
   const getInitialView = (): string => {

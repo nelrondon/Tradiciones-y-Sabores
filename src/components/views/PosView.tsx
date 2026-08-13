@@ -126,7 +126,6 @@ export default function PosView() {
   const [activeMobileTab, setActiveMobileTab] = useState<"catalog" | "cart">("catalog");
 
   // ── Fetch catálogo ──
-  // ── Fetch catálogo ──
   useEffect(() => {
     api
       .getProductos()
@@ -625,6 +624,13 @@ export default function PosView() {
               ${total.toFixed(2)}
             </span>
           </div>
+
+          {errorEnvio && (
+            <div className="bg-error-container text-on-error-container p-3 rounded-lg flex items-center gap-2 border border-error text-xs font-semibold">
+              <AlertTriangle size={15} className="shrink-0" />
+              <span>{errorEnvio}</span>
+            </div>
+          )}
 
           <button
             onClick={procesarPedido}

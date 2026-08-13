@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useSelectedLayoutSegment } from "next/navigation";
-import { Bell, Search, ChefHat, Menu, Monitor, Copy, Check } from "lucide-react";
+import { ChefHat, Menu, Monitor } from "lucide-react";
 import Link from "next/link";
+import { useSelectedLayoutSegment } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface TopBarProps {
   onOpenSidebar: () => void;

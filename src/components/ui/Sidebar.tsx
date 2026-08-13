@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { Route } from "next";
+import { useState } from "react";
+import { useAuth } from "../auth/AuthProvider";
 import {
   Armchair,
   ChefHat,
@@ -13,7 +15,6 @@ import {
   Package,
   Truck,
   BarChart2,
-  Settings,
   LogOut,
   X
 } from "lucide-react";
@@ -43,6 +44,15 @@ const NUEVO_PEDIDO_HREF: Route = "/gestion/nuevo-pedido";
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { usuario, logout } = useAuth();
+  const [cerrando, setCerrando] = useState(false);
+
+  const cerrarSesion = async () => {
+    setCerrando(true);
+    await logout();
+    router.replace("/login-personal" as Route);
+  };
 
   return (
     <nav
@@ -129,9 +139,23 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       {/* ── Footer ───────────────────────────────────── */}
       <div className="flex flex-col gap-0.5 mt-auto pt-4 border-t border-white/10">
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white/40 hover:bg-white/5 hover:text-red-400 transition-all duration-150">
+        {usuario && (
+          <div className="px-3 py-2 mb-1">
+            <div className="text-sm font-bold text-white/80 truncate">
+              {usuario.nombre}
+            </div>
+            <div className="text-[10px] font-semibold text-white/30 uppercase tracking-widest mt-0.5">
+              {usuario.rol}
+            </div>
+          </div>
+        )}
+        <button
+          onClick={cerrarSesion}
+          disabled={cerrando}
+          className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold text-white/40 hover:bg-white/5 hover:text-red-400 transition-all duration-150 disabled:opacity-50"
+        >
           <LogOut size={17} className="shrink-0" />
-          <span>Cerrar Sesión</span>
+          <span>{cerrando ? "Cerrando sesión..." : "Cerrar Sesión"}</span>
         </button>
       </div>
     </nav>

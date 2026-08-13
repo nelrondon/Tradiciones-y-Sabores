@@ -6,12 +6,19 @@
  * `/swagger/json`; si el contrato cambia, este archivo es lo único que hay que tocar.
  *
  * Base URL: <NEXT_PUBLIC_API_URL>/api/v1
- * Auth: cabecera `x-api-key` en todas las rutas EXCEPTO /ordenes, que es pública
- *       (la usa el menú digital del cliente desde su propio teléfono).
+ * Auth: cabecera `Authorization: Bearer <access_token>`. La API ya no acepta la
+ *       `x-api-key`: la sesión del empleado es la única credencial. El token se
+ *       adjunta cuando existe, y un 401 dispara una renovación automática con el
+ *       refresh token antes de reintentar la petición una única vez.
+ *
+ *       Las rutas del menú digital (catálogo y creación/consulta de órdenes)
+ *       siguen siendo públicas: se llaman sin token desde el teléfono del
+ *       cliente. El contrato completo está en AUTH-BACKEND.md.
  */
 
+import { sesion } from "./sesion";
+
 const BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
 const API_ROOT = `${BASE}/api/v1`;
 
 // ─────────────────────────────────────────────────────────────
@@ -38,6 +45,9 @@ export type CategoriaPlato =
 export type EstadoMesa = "disponible" | "ocupada" | "reservada" | "fuera_de_servicio";
 
 export type EstadoPago = "pendiente" | "pagado" | "anulado";
+
+/** Rol del empleado que inicia sesión. Ver AUTH-BACKEND.md. */
+export type RolUsuario = "admin" | "gerente" | "empleado";
 
 /** Estado de envío de una orden de compra a proveedor (reportes). */
 export type EstadoPedidoProveedor = "En Proceso" | "En camino" | "Recibido";
@@ -219,6 +229,41 @@ export interface ApiMetadatos {
 }
 
 // ─────────────────────────────────────────────────────────────
+// TIPOS — Autenticación
+// ─────────────────────────────────────────────────────────────
+
+/** Empleado con acceso al panel de gestión. Nunca incluye la contraseña. */
+export interface Usuario {
+  id_usuario: number;
+  /** Nombre de usuario para iniciar sesión (único). */
+  usuario: string;
+  nombre: string;
+  rol: RolUsuario;
+  activo: boolean;
+}
+
+export interface LoginInput {
+  usuario: string;
+  contrasena: string;
+}
+
+/** Respuesta de POST /auth/login. */
+export interface SesionResponse {
+  access_token: string;
+  refresh_token: string;
+  /** Vida útil del access token, en segundos. */
+  expires_in: number;
+  usuario: Usuario;
+}
+
+/** Respuesta de POST /auth/refresh. `refresh_token` solo si el backend rota. */
+export interface RefrescarSesionResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+}
+
+// ─────────────────────────────────────────────────────────────
 // TIPOS — Respuestas envueltas
 // ─────────────────────────────────────────────────────────────
 
@@ -336,8 +381,11 @@ interface OpcionesRequest {
   method?: Metodo;
   body?: unknown;
   query?: Record<string, string | number | undefined>;
-  /** Las rutas de /ordenes no llevan API key. */
-  publica?: boolean;
+  /**
+   * Evita el reintento automático tras renovar el token. Se usa en las propias
+   * rutas de /auth para no entrar en un bucle de refresh.
+   */
+  sinReintento?: boolean;
 }
 
 function construirUrl(
@@ -355,12 +403,16 @@ function construirUrl(
   return qs ? `${url}?${qs}` : url;
 }
 
-async function request<T>(path: string, opciones: OpcionesRequest = {}): Promise<T> {
-  const { method = "GET", body, query, publica = false } = opciones;
+async function ejecutar<T>(path: string, opciones: OpcionesRequest): Promise<T> {
+  const { method = "GET", body, query } = opciones;
 
   const headers: Record<string, string> = { Accept: "application/json" };
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (!publica) headers["x-api-key"] = API_KEY;
+
+  // El token de sesión va en TODAS las rutas cuando existe: las públicas lo
+  // ignoran, y las protegidas lo exigen.
+  const access = sesion.accessToken();
+  if (access) headers["Authorization"] = `Bearer ${access}`;
 
   let response: Response;
   try {
@@ -398,6 +450,62 @@ async function request<T>(path: string, opciones: OpcionesRequest = {}): Promise
   return json as T;
 }
 
+/**
+ * Renovación en curso. Si varias peticiones reciben 401 a la vez, todas esperan
+ * al mismo refresh en lugar de quemar el refresh token varias veces.
+ */
+let renovacionEnCurso: Promise<boolean> | null = null;
+
+/**
+ * Canjea el refresh token por un access token nuevo.
+ * Devuelve `false` (y cierra la sesión) si el refresh ya no sirve.
+ */
+function renovarSesion(): Promise<boolean> {
+  if (renovacionEnCurso) return renovacionEnCurso;
+
+  const refresh = sesion.refreshToken();
+  if (!refresh) return Promise.resolve(false);
+
+  renovacionEnCurso = ejecutar<RefrescarSesionResponse>("/auth/refresh", {
+    method: "POST",
+    body: { refresh_token: refresh },
+    sinReintento: true
+  })
+    .then(r => {
+      // El backend puede rotar el refresh token; si no lo hace, se conserva.
+      sesion.guardar({ access: r.access_token, refresh: r.refresh_token ?? refresh });
+      return true;
+    })
+    .catch(() => {
+      sesion.limpiar();
+      return false;
+    })
+    .finally(() => {
+      renovacionEnCurso = null;
+    });
+
+  return renovacionEnCurso;
+}
+
+async function request<T>(path: string, opciones: OpcionesRequest = {}): Promise<T> {
+  try {
+    return await ejecutar<T>(path, opciones);
+  } catch (error: unknown) {
+    const expirado =
+      error instanceof ApiError &&
+      error.status === 401 &&
+      !opciones.sinReintento &&
+      sesion.refreshToken() !== null;
+
+    if (!expirado) throw error;
+
+    // Un 401 con refresh token disponible significa "access token vencido":
+    // se renueva una vez y se repite la petición original.
+    if (!(await renovarSesion())) throw error;
+    return ejecutar<T>(path, opciones);
+  }
+}
+
 // ─────────────────────────────────────────────────────────────
 // FUNCIONES API
 // ─────────────────────────────────────────────────────────────
@@ -406,30 +514,53 @@ export const api = {
   // ── Metadatos ────────────────────────────────────────────
   getMetadatos: (): Promise<ApiMetadatos> => request("/"),
 
-  // ── Órdenes / Comandas (rutas públicas, sin API key) ─────
+  // ── Autenticación ────────────────────────────────────────
+  // Rutas asumidas: el contrato que debe implementar el backend está descrito
+  // en AUTH-BACKEND.md, en la raíz del repo.
+
+  /** Canjea usuario + contraseña por un par de tokens. 401 si no coinciden. */
+  login: (data: LoginInput): Promise<SesionResponse> =>
+    request("/auth/login", { method: "POST", body: data, sinReintento: true }),
+
+  /**
+   * Invalida el refresh token en el servidor. Se llama al cerrar sesión; si
+   * falla (token ya vencido, API caída) igual se limpia la sesión local.
+   */
+  logout: (): Promise<MensajeResponse> =>
+    request("/auth/logout", {
+      method: "POST",
+      body: { refresh_token: sesion.refreshToken() },
+      sinReintento: true
+    }),
+
+  /** Usuario de la sesión actual. Sirve para validar el token al arrancar. */
+  getPerfil: (): Promise<Usuario> =>
+    request<Usuario | ConDatos<Usuario>>("/auth/me").then(desenvolver),
+
+  // ── Órdenes / Comandas ───────────────────────────────────
+  /** Requiere sesión: devuelve los pedidos de todo el salón. */
   getOrdenes: (estatus?: EstatusOrden | "activo"): Promise<Orden[]> =>
-    request<Orden[]>("/ordenes", { query: { estatus }, publica: true }).then(o =>
+    request<Orden[]>("/ordenes", { query: { estatus } }).then(o =>
       o.map(normalizarOrden)
     ),
 
   /** Órdenes del tablero de cocina: recibido, preparando o listo. */
   getOrdenesActivas: (): Promise<Orden[]> =>
-    request<Orden[]>("/ordenes", {
-      query: { estatus: "activo" },
-      publica: true
-    }).then(o => o.map(normalizarOrden)),
+    request<Orden[]>("/ordenes", { query: { estatus: "activo" } }).then(o =>
+      o.map(normalizarOrden)
+    ),
 
+  /** Pública: el cliente sigue su pedido desde su teléfono. */
   getOrden: (id: number): Promise<Orden> =>
-    request<Orden>(`/ordenes/${id}`, { publica: true }).then(normalizarOrden),
+    request<Orden>(`/ordenes/${id}`).then(normalizarOrden),
 
   /**
    * Crea la orden con sus líneas de detalle. El estatus inicial ("recibido") lo
    * asigna el backend, y el nombre y el precio de cada ítem se toman del menú.
+   * Pública: la usa el menú digital del cliente.
    */
   crearOrden: (data: CrearOrdenInput): Promise<Orden> =>
-    request<Orden>("/ordenes", { method: "POST", body: data, publica: true }).then(
-      normalizarOrden
-    ),
+    request<Orden>("/ordenes", { method: "POST", body: data }).then(normalizarOrden),
 
   actualizarEstatusOrden: (
     id: number,
@@ -437,13 +568,12 @@ export const api = {
   ): Promise<ActualizarEstatusOrdenResponse> =>
     request(`/ordenes/${id}`, {
       method: "PUT",
-      body: { Estatus_Orden: estatus },
-      publica: true
+      body: { Estatus_Orden: estatus }
     }),
 
   /** Soft-delete: marca la orden como "cancelado", no borra el registro. */
   cancelarOrden: (id: number): Promise<MensajeResponse> =>
-    request(`/ordenes/${id}`, { method: "DELETE", publica: true }),
+    request(`/ordenes/${id}`, { method: "DELETE" }),
 
   // ── Platos / Menú ────────────────────────────────────────
   getPlatos: (): Promise<Plato[]> =>

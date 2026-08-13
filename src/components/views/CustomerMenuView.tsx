@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api, Orden, Plato } from "../../api";
+import StaffAccessBar from "../ui/StaffAccessBar";
 import { useToast } from "../ui/Toast";
 
 const CATEGORIAS_DISPLAY = [
@@ -245,6 +246,9 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
 
   return (
     <div className="min-h-screen bg-surface font-sans text-on-surface pb-24">
+      {/* ── Acceso del personal al panel de gestión ── */}
+      <StaffAccessBar />
+
       {/* ── HEADER CLIENTE — Solo el restaurante, nada del sistema interno ── */}
       <header className="relative bg-gradient-to-r from-primary-dark via-primary to-amber-600 text-on-primary py-8 px-4 sm:px-8 shadow-xl overflow-hidden">
         <div className="absolute inset-0 bg-black/10 backdrop-blur-[2px]" />

@@ -439,7 +439,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                     selectedCategory === cat.id
-                      ? "bg-primary text-on-primary shadow-md scale-105"
+                      ? "bg-primary text-on-primary shadow-md"
                       : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest"
                   }`}
                 >

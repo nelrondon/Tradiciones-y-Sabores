@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { api, type Insumo, type InsumoInput } from "../../api";
+import { useToast } from "../ui/Toast";
 
 type FormData = InsumoInput;
 
@@ -177,6 +178,8 @@ function ModalItem({
 // ── Vista Principal ───────────────────────────────────────────────────────────
 
 export default function InventoryView() {
+  const toast = useToast();
+
   const [items, setItems] = useState<Insumo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -238,21 +241,25 @@ export default function InventoryView() {
       }
       setShowModal(false);
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Error al guardar");
+      toast.showToast("error", e instanceof Error ? e.message : "Error al guardar");
     } finally {
       setGuardando(false);
     }
   };
 
   const eliminar = async (id: number) => {
-    if (!confirm("¿Eliminar este ítem del inventario? Esta acción no se puede deshacer."))
-      return;
+    const aceptado = await toast.showConfirm({
+      title: "¿Eliminar este ítem del inventario?",
+      message: "Esta acción no se puede deshacer.",
+      confirmLabel: "Sí, eliminar"
+    });
+    if (!aceptado) return;
     setEliminando(id);
     try {
       await api.eliminarInsumo(id);
       setItems(prev => prev.filter(i => i.id_insumos !== id));
     } catch (e: unknown) {
-      alert(e instanceof Error ? e.message : "Error al eliminar");
+      toast.showToast("error", e instanceof Error ? e.message : "Error al eliminar");
     } finally {
       setEliminando(null);
     }

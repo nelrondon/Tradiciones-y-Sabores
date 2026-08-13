@@ -60,7 +60,7 @@ const ESTADOS_FILTROS: (EstatusOrden | "")[] = ["", ...ESTADOS];
 // ── Vista Principal ───────────────────────────────────────────────────────────
 
 export default function OrdersView() {
-  const { showToast } = useToast();
+  const { showToast, showConfirm } = useToast();
   const [ordenes, setOrdenes] = useState<Orden[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -116,12 +116,13 @@ export default function OrdersView() {
   const toggleExpandida = (id: number) => setExpandida(prev => (prev === id ? null : id));
 
   const cancelarOrden = async (orden: Orden) => {
-    if (
-      !confirm(
-        `¿Cancelar el pedido #${orden.id_pedido} de ${orden.cliente_nombre}? Esta acción no se puede deshacer.`
-      )
-    )
-      return;
+    const aceptado = await showConfirm({
+      title: `¿Cancelar el pedido #${orden.id_pedido}?`,
+      message: `Cliente: ${orden.cliente_nombre}. Esta acción no se puede deshacer.`,
+      confirmLabel: "Sí, cancelar",
+      cancelLabel: "Volver"
+    });
+    if (!aceptado) return;
     setCancelando(orden.id_pedido);
     try {
       await api.cancelarOrden(orden.id_pedido);

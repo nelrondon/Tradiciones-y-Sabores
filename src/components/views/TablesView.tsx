@@ -184,7 +184,7 @@ function ModalMesa({
 // ── Vista Principal ───────────────────────────────────────────────────────────
 
 export default function TablesView() {
-  const { showToast } = useToast();
+  const { showToast, showConfirm } = useToast();
   const [mesas, setMesas] = useState<Mesa[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -273,12 +273,12 @@ export default function TablesView() {
   };
 
   const eliminar = async (mesa: Mesa) => {
-    if (
-      !confirm(
-        `¿Eliminar la mesa ${mesa.id_mesa} (${mesa.ubicacion})? Esta acción no se puede deshacer.`
-      )
-    )
-      return;
+    const aceptado = await showConfirm({
+      title: `¿Eliminar la mesa ${mesa.id_mesa}?`,
+      message: `${mesa.ubicacion} · ${mesa.capacidad} personas. Esta acción no se puede deshacer.`,
+      confirmLabel: "Sí, eliminar"
+    });
+    if (!aceptado) return;
     setEliminando(mesa.id_mesa);
     try {
       await api.eliminarMesa(mesa.id_mesa);

@@ -175,7 +175,7 @@ function ModalPlato({
 // ── Vista Principal ───────────────────────────────────────────────────────────
 
 export default function PlatesView() {
-  const { showToast } = useToast();
+  const { showToast, showConfirm } = useToast();
   const [platos, setPlatos] = useState<Plato[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -233,8 +233,12 @@ export default function PlatesView() {
   };
 
   const eliminar = async (id: number, nombre: string) => {
-    if (!confirm(`¿Eliminar "${nombre}" del menú? Esta acción no se puede deshacer.`))
-      return;
+    const aceptado = await showConfirm({
+      title: `¿Eliminar "${nombre}" del menú?`,
+      message: "Esta acción no se puede deshacer.",
+      confirmLabel: "Sí, eliminar"
+    });
+    if (!aceptado) return;
     setEliminando(id);
     try {
       await api.eliminarPlato(id);

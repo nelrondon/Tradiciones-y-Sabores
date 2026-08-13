@@ -9,7 +9,8 @@ import {
   ChevronDown,
   ChevronUp,
   XCircle,
-  Search
+  Search,
+  Trash2
 } from "lucide-react";
 import { api, type Orden, type EstatusOrden } from "../../api";
 import { useToast } from "../ui/Toast";
@@ -20,7 +21,9 @@ function BadgeEstatus({ estatus }: { estatus: EstatusOrden }) {
   const estilos: Partial<Record<EstatusOrden, string>> = {
     recibido: "bg-surface-dim text-on-surface-variant border border-outline-variant",
     preparando: "bg-[#fbbf24] text-black",
-    listo: "bg-[#10b981] text-white"
+    listo: "bg-[#10b981] text-white",
+    entregado: "bg-surface-container-high text-on-surface-variant border border-outline-variant",
+    cancelado: "bg-error-container text-on-error-container border border-error line-through"
   };
   return (
     <span
@@ -54,8 +57,15 @@ function BadgeTipo({ tipo }: { tipo: Orden["tipo"] }) {
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
+/** Estados del flujo activo: son los que se cuentan en las tarjetas de arriba. */
 const ESTADOS: EstatusOrden[] = ["recibido", "preparando", "listo"];
-const ESTADOS_FILTROS: (EstatusOrden | "")[] = ["", ...ESTADOS];
+
+/** Los cancelados ya no se borran de la lista, así que se pueden filtrar. */
+const ESTADOS_FILTROS: (EstatusOrden | "")[] = ["", ...ESTADOS, "cancelado"];
+
+/** Un pedido solo se puede cancelar mientras siga en el flujo activo. */
+const esCancelable = (estatus: EstatusOrden): boolean =>
+  estatus === "recibido" || estatus === "preparando";
 
 // ── Vista Principal ───────────────────────────────────────────────────────────
 
@@ -68,6 +78,7 @@ export default function OrdersView() {
   const [busqueda, setBusqueda] = useState("");
   const [expandida, setExpandida] = useState<number | null>(null);
   const [cancelando, setCancelando] = useState<number | null>(null);
+  const [eliminando, setEliminando] = useState<number | null>(null);
 
   const cargar = useCallback(async () => {
     setLoading(true);
@@ -118,7 +129,7 @@ export default function OrdersView() {
   const cancelarOrden = async (orden: Orden) => {
     const aceptado = await showConfirm({
       title: `¿Cancelar el pedido #${orden.id_pedido}?`,
-      message: `Cliente: ${orden.cliente_nombre}. Esta acción no se puede deshacer.`,
+      message: `Cliente: ${orden.cliente_nombre}. El pedido queda registrado como cancelado y no se puede reactivar.`,
       confirmLabel: "Sí, cancelar",
       cancelLabel: "Volver"
     });
@@ -126,9 +137,14 @@ export default function OrdersView() {
     setCancelando(orden.id_pedido);
     try {
       await api.cancelarOrden(orden.id_pedido);
-      setOrdenes(prev => prev.filter(o => o.id_pedido !== orden.id_pedido));
+      // La API hace un soft-delete: el pedido sigue existiendo con estatus
+      // "cancelado", así que se actualiza en la lista en vez de sacarlo.
+      setOrdenes(prev =>
+        prev.map(o =>
+          o.id_pedido === orden.id_pedido ? { ...o, Estatus_Orden: "cancelado" } : o
+        )
+      );
       showToast("success", `Pedido #${orden.id_pedido} cancelado`, orden.cliente_nombre);
-      setExpandida(null);
     } catch (e: unknown) {
       showToast(
         "error",
@@ -137,6 +153,31 @@ export default function OrdersView() {
       );
     } finally {
       setCancelando(null);
+    }
+  };
+
+  const eliminarOrden = async (orden: Orden) => {
+    const aceptado = await showConfirm({
+      title: `¿Eliminar el pedido #${orden.id_pedido}?`,
+      message: `Cliente: ${orden.cliente_nombre} — $${orden.total.toFixed(2)}. Se borra de la base de datos junto con su detalle; no queda registro para los informes.`,
+      confirmLabel: "Sí, eliminar",
+      cancelLabel: "Volver"
+    });
+    if (!aceptado) return;
+    setEliminando(orden.id_pedido);
+    try {
+      await api.eliminarOrden(orden.id_pedido);
+      setOrdenes(prev => prev.filter(o => o.id_pedido !== orden.id_pedido));
+      showToast("success", `Pedido #${orden.id_pedido} eliminado`, orden.cliente_nombre);
+      setExpandida(null);
+    } catch (e: unknown) {
+      showToast(
+        "error",
+        "Error al eliminar",
+        e instanceof Error ? e.message : "Intente nuevamente"
+      );
+    } finally {
+      setEliminando(null);
     }
   };
 
@@ -398,12 +439,15 @@ export default function OrdersView() {
                       </table>
                     </div>
 
-                    {/* Botón cancelar — solo si no está Listo */}
-                    {orden.Estatus_Orden !== "listo" && (
-                      <div className="mt-4 flex justify-end">
+                    {/* Acciones: cancelar (solo en el flujo activo) y eliminar */}
+                    <div className="mt-4 flex flex-wrap justify-end gap-2">
+                      {esCancelable(orden.Estatus_Orden) && (
                         <button
                           onClick={() => cancelarOrden(orden)}
-                          disabled={cancelando === orden.id_pedido}
+                          disabled={
+                            cancelando === orden.id_pedido ||
+                            eliminando === orden.id_pedido
+                          }
                           className="flex items-center gap-2 text-sm font-bold text-error border border-error/30 bg-error-container/30 hover:bg-error-container px-4 py-2 rounded transition-colors disabled:opacity-50"
                         >
                           {cancelando === orden.id_pedido ? (
@@ -413,8 +457,24 @@ export default function OrdersView() {
                           )}
                           Cancelar pedido
                         </button>
-                      </div>
-                    )}
+                      )}
+
+                      <button
+                        onClick={() => eliminarOrden(orden)}
+                        disabled={
+                          eliminando === orden.id_pedido || cancelando === orden.id_pedido
+                        }
+                        title="Borra el pedido de la base de datos, sin dejar registro"
+                        className="flex items-center gap-2 text-sm font-bold text-white bg-error hover:opacity-90 px-4 py-2 rounded transition-opacity disabled:opacity-50"
+                      >
+                        {eliminando === orden.id_pedido ? (
+                          <Loader2 size={15} className="animate-spin" />
+                        ) : (
+                          <Trash2 size={15} />
+                        )}
+                        Eliminar pedido
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>

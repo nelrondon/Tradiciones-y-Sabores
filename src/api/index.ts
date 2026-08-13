@@ -575,6 +575,16 @@ export const api = {
   cancelarOrden: (id: number): Promise<MensajeResponse> =>
     request(`/ordenes/${id}`, { method: "DELETE" }),
 
+  /**
+   * Borra la orden y su detalle de la base de datos, sin dejar rastro.
+   *
+   * ⚠️ Ruta asumida (no documentada en el swagger). Se separa de `cancelarOrden`
+   * a propósito: `DELETE /ordenes/:id` ya está tomado por el soft-delete.
+   * Requiere sesión.
+   */
+  eliminarOrden: (id: number): Promise<MensajeResponse> =>
+    request(`/ordenes/${id}/permanente`, { method: "DELETE" }),
+
   // ── Platos / Menú ────────────────────────────────────────
   getPlatos: (): Promise<Plato[]> =>
     request<Plato[]>("/platos").then(p => p.map(normalizarPlato)),

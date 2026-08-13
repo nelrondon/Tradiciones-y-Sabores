@@ -13,7 +13,7 @@ import {
   Trash2
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { api, type Producto } from "../../api";
+import { api, type Plato } from "../../api";
 import { useToast } from "../ui/Toast";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -29,7 +29,7 @@ const nuevoTicketId = () => `T-${Date.now().toString(36).toUpperCase().slice(-6)
 // ── Tipos locales ─────────────────────────────────────────────────────────────
 
 interface ItemCarrito {
-  producto: Producto;
+  producto: Plato;
   cantidad: number;
   notas: string;
 }
@@ -98,7 +98,7 @@ export default function PosView() {
   const { showToast } = useToast();
 
   // Catálogo
-  const [productos, setProductos] = useState<Producto[]>([]);
+  const [productos, setProductos] = useState<Plato[]>([]);
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [errorProductos, setErrorProductos] = useState<string | null>(null);
   const [categoriaActiva, setCategoriaActiva] = useState("");
@@ -130,7 +130,7 @@ export default function PosView() {
   // ── Fetch catálogo ──
   useEffect(() => {
     api
-      .getProductos()
+      .getPlatos()
       .then(data => {
         const safeData = Array.isArray(data) ? data : [];
         setProductos(safeData);
@@ -163,13 +163,13 @@ export default function PosView() {
   const total = subtotal + iva;
 
   // ── Manejo del carrito ──
-  const agregarAlCarrito = (producto: Producto) => {
+  const agregarAlCarrito = (producto: Plato) => {
     if (!producto.disponible) return;
     setCarrito(prev => {
-      const existe = prev.find(i => i.producto.id_producto === producto.id_producto);
+      const existe = prev.find(i => i.producto.id_plato === producto.id_plato);
       if (existe)
         return prev.map(i =>
-          i.producto.id_producto === producto.id_producto
+          i.producto.id_plato === producto.id_plato
             ? { ...i, cantidad: i.cantidad + 1 }
             : i
         );
@@ -180,19 +180,15 @@ export default function PosView() {
   const cambiarCantidad = (id: number, delta: number) =>
     setCarrito(prev =>
       prev
-        .map(i =>
-          i.producto.id_producto === id ? { ...i, cantidad: i.cantidad + delta } : i
-        )
+        .map(i => (i.producto.id_plato === id ? { ...i, cantidad: i.cantidad + delta } : i))
         .filter(i => i.cantidad > 0)
     );
 
   const actualizarNotas = (id: number, notas: string) =>
-    setCarrito(prev =>
-      prev.map(i => (i.producto.id_producto === id ? { ...i, notas } : i))
-    );
+    setCarrito(prev => prev.map(i => (i.producto.id_plato === id ? { ...i, notas } : i)));
 
   const eliminarItem = (id: number) =>
-    setCarrito(prev => prev.filter(i => i.producto.id_producto !== id));
+    setCarrito(prev => prev.filter(i => i.producto.id_plato !== id));
 
   // ── Procesar pedido ──
   const procesarPedido = async () => {
@@ -203,6 +199,15 @@ export default function PosView() {
     }
     if (!cliente.nombre.trim()) {
       setErrorEnvio("El nombre del cliente es requerido.");
+      return;
+    }
+    // La API exige cédula y teléfono: con ellos da de alta al cliente si no existe.
+    if (!cliente.cedula.trim()) {
+      setErrorEnvio("La cédula del cliente es requerida.");
+      return;
+    }
+    if (!cliente.telefono.trim()) {
+      setErrorEnvio("El teléfono del cliente es requerido.");
       return;
     }
     if (orderType === "mesa" && !mesa) {
@@ -220,23 +225,20 @@ export default function PosView() {
 
     setEnviando(true);
     try {
+      // El backend calcula subtotal, IVA y total desde el menú: solo se envían
+      // los datos del cliente y las líneas del pedido.
       await api.crearOrden({
         cliente_nombre: cliente.nombre.toUpperCase().trim(),
-        cliente_cedula: cliente.cedula.trim() || undefined,
-        cliente_telefono: cliente.telefono.trim() || undefined,
+        cliente_cedula: cliente.cedula.trim(),
+        cliente_telefono: cliente.telefono.trim(),
         tipo: orderType,
-        mesa: orderType === "mesa" ? Number(mesa) : undefined,
-        direccion: orderType === "delivery" ? direccion.trim() : undefined,
+        mesa: orderType === "mesa" ? Number(mesa) : null,
+        direccion: orderType === "delivery" ? direccion.trim() : null,
         items: carrito.map(i => ({
-          id_producto: i.producto.id_producto,
-          nombre: i.producto.nombre,
+          id_producto: i.producto.id_plato,
           cantidad: i.cantidad,
-          precio_unitario: i.producto.precio,
           notas: i.notas.trim() || undefined
-        })),
-        subtotal,
-        iva,
-        total
+        }))
       });
 
       // Generar enlace de WhatsApp y redirigir la pestaña ya abierta
@@ -391,7 +393,7 @@ export default function PosView() {
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {productosFiltrados.map(prod => (
                 <button
-                  key={prod.id_producto}
+                  key={prod.id_plato}
                   onClick={() => {
                     agregarAlCarrito(prod);
                     showToast("success", `Añadido: ${prod.nombre}`);
@@ -546,7 +548,7 @@ export default function PosView() {
           ) : (
             carrito.map(item => (
               <div
-                key={item.producto.id_producto}
+                key={item.producto.id_plato}
                 className="bg-surface border border-outline-variant rounded-xl p-3 flex flex-col gap-2 relative shadow-sm hover:shadow transition-shadow"
               >
                 <div className="flex justify-between items-start gap-4">
@@ -559,7 +561,7 @@ export default function PosView() {
                     </h4>
                   </div>
                   <button
-                    onClick={() => eliminarItem(item.producto.id_producto)}
+                    onClick={() => eliminarItem(item.producto.id_plato)}
                     className="text-on-surface-variant hover:text-error transition-colors p-1"
                   >
                     <Trash2 size={16} />
@@ -572,7 +574,7 @@ export default function PosView() {
                     type="text"
                     value={item.notas}
                     onChange={e =>
-                      actualizarNotas(item.producto.id_producto, e.target.value)
+                      actualizarNotas(item.producto.id_plato, e.target.value)
                     }
                     placeholder="Notas especiales (ej. sin cebolla)"
                     className="w-full text-xs bg-surface-container border-b border-outline outline-none py-1 focus:border-secondary-container transition-colors placeholder:text-outline/60 text-on-surface"
@@ -582,7 +584,7 @@ export default function PosView() {
                 <div className="flex justify-between items-center mt-1 pt-2 border-t border-surface-dim">
                   <div className="flex items-center gap-1 bg-surface-container rounded-lg border border-outline-variant p-0.5">
                     <button
-                      onClick={() => cambiarCantidad(item.producto.id_producto, -1)}
+                      onClick={() => cambiarCantidad(item.producto.id_plato, -1)}
                       className="w-7 h-7 flex items-center justify-center text-on-surface hover:bg-surface rounded-md transition-colors"
                     >
                       <Minus size={13} />
@@ -591,7 +593,7 @@ export default function PosView() {
                       {item.cantidad}
                     </span>
                     <button
-                      onClick={() => cambiarCantidad(item.producto.id_producto, 1)}
+                      onClick={() => cambiarCantidad(item.producto.id_plato, 1)}
                       className="w-7 h-7 flex items-center justify-center text-on-surface hover:bg-surface rounded-md transition-colors"
                     >
                       <Plus size={13} />

@@ -92,9 +92,7 @@ export default function OrdersView() {
   const filtradas = ordenes
     .filter(o =>
       filtroEstado
-        ? (o.estado_orden || o.Estatus_Orden || "")
-            .toLowerCase()
-            .includes(filtroEstado.toLowerCase())
+        ? (o.Estatus_Orden || "").toLowerCase().includes(filtroEstado.toLowerCase())
         : true
     )
     .filter(o => {
@@ -105,10 +103,7 @@ export default function OrdersView() {
         .replace(/[^0-9a-z]/g, "");
       const ticket = String(o.num_ticket || o.id_pedido || "").toLowerCase();
       const cliente = (o.cliente_nombre || "").toLowerCase();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const cedula = (o.cliente_cedula || (o as any).cedula_cliente || "")
-        .toLowerCase()
-        .replace(/[^0-9a-z]/g, "");
+      const cedula = (o.cliente_cedula || "").toLowerCase().replace(/[^0-9a-z]/g, "");
       const telf = (o.cliente_telefono || "").toLowerCase().replace(/[^0-9a-z]/g, "");
       return (
         ticket.includes(q) ||

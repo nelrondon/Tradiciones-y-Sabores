@@ -15,7 +15,22 @@ import {
   Loader2,
   AlertTriangle
 } from "lucide-react";
-import { api, type Orden, type ResumenReporte } from "../../api";
+import {
+  api,
+  type EstadoPedidoProveedor,
+  type ReportePedidoItem,
+  type ReporteResumen
+} from "../../api";
+
+/** Estados de envío que acepta GET /reportes/pedidos */
+const ESTADOS_ENVIO: EstadoPedidoProveedor[] = ["En Proceso", "En camino", "Recibido"];
+
+/** Milisegundos que abarca cada período del selector. */
+const RANGOS_MS: Record<string, number> = {
+  hoy: 24 * 60 * 60 * 1000,
+  "7d": 7 * 24 * 60 * 60 * 1000,
+  "30d": 30 * 24 * 60 * 60 * 1000
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -25,17 +40,17 @@ function formatSegundos(seg: number): string {
   return `${m}m ${s.toString().padStart(2, "0")}s`;
 }
 
-function BadgeEstatus({ estatus }: { estatus: string }) {
-  const estilos: Record<string, string> = {
-    Recibido: "bg-surface-dim text-on-surface-variant border border-outline-variant",
-    Preparando: "bg-[#fbbf24] text-black",
-    Listo: "bg-[#10b981] text-white"
+function BadgeEstatus({ estatus }: { estatus: EstadoPedidoProveedor }) {
+  const estilos: Record<EstadoPedidoProveedor, string> = {
+    "En Proceso": "bg-[#fbbf24] text-black",
+    "En camino": "bg-surface-dim text-on-surface-variant border border-outline-variant",
+    Recibido: "bg-[#10b981] text-white"
   };
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded ${estilos[estatus] ?? estilos["Recibido"]}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider rounded ${estilos[estatus] ?? estilos["En camino"]}`}
     >
-      {estatus === "Preparando" && (
+      {estatus === "En Proceso" && (
         <span className="w-1.5 h-1.5 bg-black rounded-full animate-pulse" />
       )}
       {estatus}
@@ -48,11 +63,11 @@ const ITEMS_POR_PAGINA = 10;
 // ── Vista Principal ───────────────────────────────────────────────────────────
 
 export default function ReportsView() {
-  const [resumen, setResumen] = useState<ResumenReporte | null>(null);
-  const [pedidos, setPedidos] = useState<Orden[]>([]);
+  const [resumen, setResumen] = useState<ReporteResumen | null>(null);
+  const [pedidos, setPedidos] = useState<ReportePedidoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filtroEstado, setFiltroEstado] = useState("");
+  const [filtroEstado, setFiltroEstado] = useState<EstadoPedidoProveedor | "">("");
   const [filtroPeriodo, setFiltroPeriodo] = useState("hoy");
   const [pagina, setPagina] = useState(1);
 
@@ -60,15 +75,16 @@ export default function ReportsView() {
     setLoading(true);
     setError(null);
     try {
+      // La API solo filtra por estado; el período se aplica aquí sobre hora_creacion.
       const [resumenData, pedidosData] = await Promise.all([
-        api.getResumen(),
-        api.getPedidosReporte({
-          estado: filtroEstado || undefined,
-          periodo: filtroPeriodo
-        })
+        api.getResumenReporte(),
+        api.getPedidosReporte(filtroEstado || undefined)
       ]);
+      const desde = Date.now() - (RANGOS_MS[filtroPeriodo] ?? RANGOS_MS["30d"]);
       setResumen(resumenData);
-      setPedidos(pedidosData);
+      setPedidos(
+        pedidosData.filter(p => new Date(p.hora_creacion).getTime() >= desde)
+      );
       setPagina(1);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Error al cargar datos");
@@ -90,13 +106,12 @@ export default function ReportsView() {
 
   const exportarCSV = () => {
     const filas = [
-      ["ID Pedido", "Hora", "Cliente", "Cédula", "Teléfono", "Tipo", "Total", "Estado"],
+      ["ID Pedido", "N° Ticket", "Hora", "Proveedor", "Tipo", "Total", "Estado"],
       ...pedidos.map(p => [
         `#${p.id_pedido}`,
+        String(p.num_ticket),
         p.hora_creacion,
         p.cliente_nombre,
-        p.cliente_cedula ?? "",
-        p.cliente_telefono ?? "",
         p.tipo,
         p.total.toFixed(2),
         p.Estatus_Orden
@@ -245,13 +260,17 @@ export default function ReportsView() {
           <div className="flex gap-2">
             <select
               value={filtroEstado}
-              onChange={e => setFiltroEstado(e.target.value)}
+              onChange={e =>
+                setFiltroEstado(e.target.value as EstadoPedidoProveedor | "")
+              }
               className="industrial-input h-9 w-auto px-3 text-sm"
             >
               <option value="">Todos los estados</option>
-              <option value="Recibido">Recibido</option>
-              <option value="Preparando">Preparando</option>
-              <option value="Listo">Listo</option>
+              {ESTADOS_ENVIO.map(e => (
+                <option key={e} value={e}>
+                  {e}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -263,7 +282,7 @@ export default function ReportsView() {
               <tr className="text-xs text-on-surface-variant uppercase border-b border-outline-variant bg-surface-container-high">
                 <th className="text-left p-4">ID Pedido</th>
                 <th className="text-left p-4">Hora</th>
-                <th className="text-left p-4">Cliente</th>
+                <th className="text-left p-4">Proveedor</th>
                 <th className="p-4">Tipo</th>
                 <th className="text-right p-4">Total</th>
                 <th className="p-4">Estado</th>

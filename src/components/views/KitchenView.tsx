@@ -1,16 +1,16 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
 import {
   AlertTriangle,
-  RefreshCw,
   CheckCircle,
-  Loader2,
   Clock,
+  Loader2,
+  RefreshCw,
   Volume2,
   VolumeX
 } from "lucide-react";
-import { api, type Orden, type EstatusOrden } from "../../api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, type EstatusOrden, type Orden } from "../../api";
 import { useToast } from "../ui/Toast";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -328,7 +328,7 @@ export default function KitchenView() {
   }, [cargarOrdenes]);
 
   const handleCambiarEstatus = async (id: number, estatus: EstatusOrden) => {
-    await api.updateEstatus(id, estatus);
+    await api.actualizarEstatusOrden(id, estatus);
     const orden = ordenes.find(o => o.id_pedido === id);
     if (estatus === "listo" && orden) {
       showToast("success", `✓ Orden #${id} lista para entregar`, orden.cliente_nombre);

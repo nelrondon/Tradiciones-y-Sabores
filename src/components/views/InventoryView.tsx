@@ -1,26 +1,27 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import {
+  AlertTriangle,
+  Edit2,
+  Loader2,
   Package,
   Plus,
-  Edit2,
+  Save,
   Trash2,
-  Loader2,
-  AlertTriangle,
-  X,
-  Save
+  X
 } from "lucide-react";
-import { api, type ItemInventario } from "../../api";
+import { useCallback, useEffect, useState } from "react";
+import { api, type Insumo, type InsumoInput } from "../../api";
 
-type FormData = Omit<ItemInventario, "id_inventario">;
+type FormData = InsumoInput;
 
 const FORM_INICIAL: FormData = {
-  nombre: "",
-  stock: 0,
-  unidad: "kg",
-  precio_costo: 0,
-  stock_minimo: 0
+  nombre_insumo: "",
+  stock_actual: 0,
+  unidad_medida: "kg",
+  stock_minimo: 0,
+  punto_reorden: 0,
+  fk_id_categoria: 1
 };
 
 const UNIDADES = ["kg", "g", "L", "mL", "unidad", "paquete", "caja", "bolsa", "litro"];
@@ -68,8 +69,8 @@ function ModalItem({
               Nombre <span className="text-error">*</span>
             </label>
             <input
-              value={form.nombre}
-              onChange={e => set("nombre", e.target.value)}
+              value={form.nombre_insumo}
+              onChange={e => set("nombre_insumo", e.target.value)}
               className="industrial-input"
               placeholder="Ej. Carne de res"
             />
@@ -81,8 +82,8 @@ function ModalItem({
                 Stock Actual <span className="text-error">*</span>
               </label>
               <input
-                value={form.stock}
-                onChange={e => set("stock", Number(e.target.value))}
+                value={form.stock_actual}
+                onChange={e => set("stock_actual", Number(e.target.value))}
                 type="number"
                 min="0"
                 className="industrial-input"
@@ -93,8 +94,8 @@ function ModalItem({
                 Unidad
               </label>
               <select
-                value={form.unidad}
-                onChange={e => set("unidad", e.target.value)}
+                value={form.unidad_medida}
+                onChange={e => set("unidad_medida", e.target.value)}
                 className="industrial-input"
               >
                 {UNIDADES.map(u => (
@@ -109,19 +110,6 @@ function ModalItem({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-bold text-on-surface-variant uppercase mb-1.5 block">
-                Precio de Costo ($)
-              </label>
-              <input
-                value={form.precio_costo}
-                onChange={e => set("precio_costo", Number(e.target.value))}
-                type="number"
-                min="0"
-                step="0.01"
-                className="industrial-input"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-bold text-on-surface-variant uppercase mb-1.5 block">
                 Stock Mínimo
               </label>
               <input
@@ -132,6 +120,31 @@ function ModalItem({
                 className="industrial-input"
               />
             </div>
+            <div>
+              <label className="text-xs font-bold text-on-surface-variant uppercase mb-1.5 block">
+                Punto de Reorden
+              </label>
+              <input
+                value={form.punto_reorden}
+                onChange={e => set("punto_reorden", Number(e.target.value))}
+                type="number"
+                min="0"
+                className="industrial-input"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-xs font-bold text-on-surface-variant uppercase mb-1.5 block">
+              Categoría (ID) <span className="text-error">*</span>
+            </label>
+            <input
+              value={form.fk_id_categoria}
+              onChange={e => set("fk_id_categoria", Number(e.target.value))}
+              type="number"
+              min="1"
+              className="industrial-input"
+            />
           </div>
         </div>
 
@@ -145,7 +158,7 @@ function ModalItem({
           </button>
           <button
             onClick={onGuardar}
-            disabled={guardando || !form.nombre?.trim()}
+            disabled={guardando || !form.nombre_insumo.trim()}
             className="px-6 h-10 text-sm font-bold bg-primary text-on-primary rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-40"
           >
             {guardando ? (
@@ -164,11 +177,11 @@ function ModalItem({
 // ── Vista Principal ───────────────────────────────────────────────────────────
 
 export default function InventoryView() {
-  const [items, setItems] = useState<ItemInventario[]>([]);
+  const [items, setItems] = useState<Insumo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
-  const [editando, setEditando] = useState<ItemInventario | null>(null);
+  const [editando, setEditando] = useState<Insumo | null>(null);
   const [form, setForm] = useState<FormData>(FORM_INICIAL);
   const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState<number | null>(null);
@@ -196,30 +209,31 @@ export default function InventoryView() {
     setShowModal(true);
   };
 
-  const abrirEditar = (item: ItemInventario) => {
+  const abrirEditar = (item: Insumo) => {
     setEditando(item);
     setForm({
-      nombre: item.nombre,
-      stock: item.stock,
-      unidad: item.unidad,
-      precio_costo: item.precio_costo,
-      stock_minimo: item.stock_minimo
+      nombre_insumo: item.nombre_insumo,
+      stock_actual: item.stock_actual,
+      unidad_medida: item.unidad_medida,
+      stock_minimo: item.stock_minimo,
+      punto_reorden: item.punto_reorden,
+      fk_id_categoria: item.fk_id_categoria
     });
     setShowModal(true);
   };
 
   const guardar = async () => {
-    if (!form.nombre?.trim()) return;
+    if (!form.nombre_insumo.trim()) return;
     setGuardando(true);
 
     try {
-      if (editando && editando.id_inventario) {
-        const updated = await api.updateItem(editando.id_inventario, form);
+      if (editando) {
+        const updated = await api.actualizarInsumo(editando.id_insumos, form);
         setItems(prev =>
-          prev.map(i => (i.id_inventario === updated.id_inventario ? updated : i))
+          prev.map(i => (i.id_insumos === updated.id_insumos ? updated : i))
         );
       } else {
-        const nuevo = await api.crearItem(form);
+        const nuevo = await api.crearInsumo(form);
         setItems(prev => [...prev, nuevo]);
       }
       setShowModal(false);
@@ -235,8 +249,8 @@ export default function InventoryView() {
       return;
     setEliminando(id);
     try {
-      await api.deleteItem(id);
-      setItems(prev => prev.filter(i => i.id_inventario !== id));
+      await api.eliminarInsumo(id);
+      setItems(prev => prev.filter(i => i.id_insumos !== id));
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Error al eliminar");
     } finally {
@@ -244,9 +258,7 @@ export default function InventoryView() {
     }
   };
 
-  const stockBajoCount = items.filter(
-    i => Number(i.stock ?? i.stock_actual ?? 0) <= Number(i.stock_minimo ?? 0)
-  ).length;
+  const stockBajoCount = items.filter(i => i.stock_actual <= i.stock_minimo).length;
 
   return (
     <div className="p-8 flex-1 flex flex-col gap-6 max-w-[1400px] mx-auto w-full">
@@ -295,7 +307,7 @@ export default function InventoryView() {
                 <th className="p-4">Stock</th>
                 <th className="p-4">Unidad</th>
                 <th className="p-4">Stock Mín.</th>
-                <th className="p-4">Costo Unit.</th>
+                <th className="p-4">Punto Reorden</th>
                 <th className="p-4">Estado</th>
                 <th className="p-4 text-right">Acciones</th>
               </tr>
@@ -315,14 +327,13 @@ export default function InventoryView() {
                   </td>
                 </tr>
               ) : (
-                items.map((item, idx) => {
-                  const itemId = item.id_inventario ?? item.id_insumos ?? idx + 1;
-                  const nombreItem =
-                    item.nombre ?? item.nombre_insumo ?? "Ítem de Inventario";
-                  const stockVal = Number(item.stock ?? item.stock_actual ?? 0);
-                  const minVal = Number(item.stock_minimo ?? 0);
-                  const unidadVal = item.unidad ?? item.unidad_medida ?? "unidad";
-                  const costoVal = Number(item.precio_costo ?? 0);
+                items.map(item => {
+                  const itemId = item.id_insumos;
+                  const nombreItem = item.nombre_insumo;
+                  const stockVal = item.stock_actual;
+                  const minVal = item.stock_minimo;
+                  const unidadVal = item.unidad_medida;
+                  const reordenVal = item.punto_reorden;
                   const bajo = stockVal <= minVal;
                   return (
                     <tr
@@ -343,7 +354,9 @@ export default function InventoryView() {
                       <td className="p-4 text-center font-mono text-on-surface-variant">
                         {minVal}
                       </td>
-                      <td className="p-4 font-mono">${costoVal.toFixed(2)}</td>
+                      <td className="p-4 text-center font-mono text-on-surface-variant">
+                        {reordenVal}
+                      </td>
                       <td className="p-4">
                         {bajo ? (
                           <span className="inline-flex items-center gap-1 bg-error-container text-on-error-container text-xs font-bold px-2 py-1 rounded">

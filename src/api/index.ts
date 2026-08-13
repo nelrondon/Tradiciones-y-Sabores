@@ -1,43 +1,24 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 /**
  * Tradiciones y Sabores — Capa de API
- * Conecta el frontend React con la API Node.js/Express del equipo de BD.
- * Base URL: /api/v1 (backend de los compañeros)
+ *
+ * Cliente tipado de la API del equipo de BD (restaurant-bd-tdb). Todos los tipos
+ * de este archivo son un reflejo directo del contrato publicado por el backend en
+ * `/swagger/json`; si el contrato cambia, este archivo es lo único que hay que tocar.
+ *
+ * Base URL: <NEXT_PUBLIC_API_URL>/api/v1
+ * Auth: cabecera `x-api-key` en todas las rutas EXCEPTO /ordenes, que es pública
+ *       (la usa el menú digital del cliente desde su propio teléfono).
  */
 
 const BASE = (process.env.NEXT_PUBLIC_API_URL || "").replace(/\/$/, "");
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
-
-// Las órdenes son públicas; el resto requiere API Key
-const PUBLIC_HEADERS = { "Content-Type": "application/json" };
-const AUTH_HEADERS = {
-  "Content-Type": "application/json",
-  "x-api-key": API_KEY
-};
-
-async function handleResponse(response: Response, message: string): Promise<any> {
-  let json;
-  try {
-    json = await response.json();
-  } catch (error: any) {
-    const message = error && error.message ? error.message : null;
-    throw new Error(`${message} (${message || "Desconocido"})`);
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      `${message}: ${json?.message || json?.error || json?.required_error || "Desconocido"}`
-    );
-  }
-  return json;
-}
+const API_ROOT = `${BASE}/api/v1`;
 
 // ─────────────────────────────────────────────────────────────
-// TIPOS E INTERFACES
-// Alineados con el schema real de la BD (restaurant-bd-tdb)
+// TIPOS — Enumeraciones
 // ─────────────────────────────────────────────────────────────
 
+/** Flujo de una orden: recibido → preparando → listo → entregado. */
 export type EstatusOrden =
   | "recibido"
   | "preparando"
@@ -52,160 +33,358 @@ export type CategoriaPlato =
   | "plato_principal"
   | "postre"
   | "bebida"
-  | "acompañante"
-  | string;
+  | "acompañante";
 
-export interface ItemOrden {
-  id_producto?: number;
-  id_plato?: number;
+export type EstadoMesa = "disponible" | "ocupada" | "reservada" | "fuera_de_servicio";
+
+export type EstadoPago = "pendiente" | "pagado" | "anulado";
+
+/** Estado de envío de una orden de compra a proveedor (reportes). */
+export type EstadoPedidoProveedor = "En Proceso" | "En camino" | "Recibido";
+
+// ─────────────────────────────────────────────────────────────
+// TIPOS — Recursos
+// ─────────────────────────────────────────────────────────────
+
+export interface OrdenItem {
+  id_producto: number;
   nombre: string;
   cantidad: number;
   precio_unitario: number;
-  subtotal?: number;
-  notas?: string;
+  subtotal: number;
+  notas?: string | null;
 }
 
 export interface Orden {
   id_pedido: number;
-  num_ticket?: number;
+  num_ticket: number;
   hora_creacion: string;
   cliente_nombre: string;
-  cliente_cedula?: string;
-  cliente_telefono?: string;
+  cliente_cedula: string;
+  cliente_telefono: string;
   tipo: TipoOrden;
-  tipo_pedido?: TipoOrden;
-  mesa?: number;
-  id_mesa?: number;
-  direccion?: string;
-  direccion_envio?: string;
-  items: ItemOrden[];
+  /** Solo aplica cuando `tipo` es "mesa". */
+  mesa: number | null;
+  /** Cadena vacía cuando la orden no es de tipo "delivery". */
+  direccion: string;
+  /** Suma de los subtotales de los ítems. */
   subtotal: number;
+  /** 16% aplicado sobre el subtotal. */
   iva: number;
   total: number;
   Estatus_Orden: EstatusOrden;
-  estado_orden?: EstatusOrden;
+  items: OrdenItem[];
 }
 
-export interface Producto {
+export interface CrearOrdenItemInput {
   id_producto: number;
-  id_plato?: number;
+  cantidad: number;
+  notas?: string | null;
+}
+
+export interface CrearOrdenInput {
+  cliente_nombre: string;
+  cliente_cedula: string;
+  cliente_telefono: string;
+  tipo: TipoOrden;
+  /** Obligatorio si `tipo` es "mesa". */
+  mesa?: number | null;
+  /** Obligatoria si `tipo` es "delivery". */
+  direccion?: string | null;
+  /** Mínimo un ítem, y no puede repetirse el mismo `id_producto` en dos líneas. */
+  items: CrearOrdenItemInput[];
+}
+
+export interface Plato {
+  id_plato: number;
   nombre: string;
-  descripcion: string;
+  descripcion: string | null;
   precio: number;
   categoria: CategoriaPlato;
-  imagen_url?: string;
+  /** No está en el schema del swagger, pero la API sí lo devuelve. */
+  imagen_url: string | null;
+  /** No está en el schema del swagger, pero la API sí lo devuelve. */
   disponible: boolean;
 }
 
-export interface ItemInventario {
-  // Campos que devuelve el backend del equipo (snake_case)
-  id_insumos?: number;
-  id_inventario?: number;
-  nombre_insumo?: string;
-  nombre?: string;
-  stock_actual?: number;
-  stock?: number;
-  unidad_medida?: string;
-  unidad?: string;
-  precio_costo: number;
+export interface PlatoInput {
+  nombre: string;
+  descripcion: string;
+  /** Debe ser mayor a 0. */
+  precio: number;
+  categoria: CategoriaPlato;
+}
+
+export interface Mesa {
+  id_mesa: number;
+  capacidad: number;
+  estado: EstadoMesa;
+  ubicacion: string;
+}
+
+export interface MesaInput {
+  /** Entero mayor a 0. */
+  capacidad: number;
+  estado: EstadoMesa;
+  ubicacion: string;
+}
+
+export interface Insumo {
+  id_insumos: number;
+  nombre_insumo: string;
+  stock_actual: number;
+  unidad_medida: string;
+  stock_minimo: number;
+  punto_reorden: number;
+  fk_id_categoria: number;
+}
+
+export interface InsumoInput {
+  nombre_insumo: string;
+  stock_actual: number;
+  unidad_medida: string;
   stock_minimo?: number;
   punto_reorden?: number;
-  fk_id_categoria?: number;
+  fk_id_categoria: number;
 }
 
 export interface Proveedor {
-  id_proveedor?: number;
-  ID_Proveedor?: number;
-  nombre?: string;
-  nombre_empresa?: string;
-  Nombre_Empresa?: string;
-  rif?: string;
-  identificacion_rif?: string;
-  Identificacion_RIF?: string;
-  contacto?: string;
-  nombre_encargado?: string;
-  Nombre_Encargado?: string;
-  telefono?: string;
-  telefono_empresa?: string;
-  Telefono_Empresa?: string;
-  email?: string;
-  email_empresa?: string;
-  Email_Empresa?: string;
-  ciudad?: string;
-  Ciudad?: string;
-  direccion?: string;
-  Direccion?: string;
+  id_proveedor: number;
+  nombre_empresa: string;
+  identificacion_rif: string;
+  ciudad: string;
+  telefono_empresa: string;
+  email_empresa: string;
+  direccion: string;
+  nombre_encargado: string;
 }
 
-export interface ResumenReporte {
+export type ProveedorInput = Omit<Proveedor, "id_proveedor">;
+
+export interface Factura {
+  num_factura: number;
+  num_ticket: number;
+  fecha_emision: string;
+  subtotal: number;
+  impuesto: number;
+  total: number;
+  estado_pago: EstadoPago;
+  metodo_pago: string | null;
+}
+
+export interface FacturaInput {
+  num_ticket: number;
+  metodo_pago?: string;
+}
+
+export interface Cliente {
+  cedula_cliente: string;
+  nombre: string;
+  telefono: string;
+  email: string | null;
+  direccion_habitual: string | null;
+}
+
+export interface ClienteInput {
+  cedula_cliente: string;
+  nombre: string;
+  telefono: string;
+  email?: string;
+  direccion_habitual?: string;
+}
+
+export interface ReporteResumen {
   total_pedidos: number;
+  /** Suma total gastada en compras a proveedores. */
   ingresos_brutos: number;
   tiempo_promedio_seg: number;
   pct_cambio_pedidos: number;
   pct_cambio_ingresos: number;
 }
 
-// ─────────────────────────────────────────────────────────────
-// HELPERS DE NORMALIZACIÓN
-// Adaptan la respuesta del backend a las interfaces del front
-// ─────────────────────────────────────────────────────────────
-
-function normalizePlato(p: any): Producto {
-  return {
-    id_producto: Number(p?.id_plato ?? p?.id_producto ?? 0),
-    id_plato: Number(p?.id_plato ?? p?.id_producto ?? 0),
-    nombre: String(p?.nombre ?? "Plato"),
-    descripcion: String(p?.descripcion ?? ""),
-    precio: Number(p?.precio ?? 0),
-    categoria: String(p?.categoria ?? "plato_principal"),
-    imagen_url: p?.imagen_url ?? undefined,
-    disponible: Boolean(p?.disponible ?? true)
-  };
+/** Fila del histórico de órdenes de compra a proveedores (GET /reportes/pedidos). */
+export interface ReportePedidoItem {
+  id_pedido: number;
+  num_ticket: number;
+  hora_creacion: string;
+  /** Nombre del proveedor al que se le compró. */
+  cliente_nombre: string;
+  tipo: string;
+  total: number;
+  Estatus_Orden: EstadoPedidoProveedor;
 }
 
-/** Normaliza un Insumo (backend devuelve snake_case) */
-function normalizeInsumo(i: any): ItemInventario {
-  return {
-    id_insumos: i.id_insumos ?? i.id_inventario ?? 0,
-    id_inventario: i.id_inventario ?? i.id_insumos ?? 0,
-    nombre_insumo: i.nombre_insumo ?? i.nombre ?? "Sin nombre",
-    nombre: i.nombre ?? i.nombre_insumo ?? "Sin nombre",
-    stock_actual: Number(i.stock_actual ?? i.stock ?? 0),
-    stock: Number(i.stock ?? i.stock_actual ?? 0),
-    unidad_medida: i.unidad_medida ?? i.unidad ?? "Kg",
-    unidad: i.unidad ?? i.unidad_medida ?? "Kg",
-    precio_costo: Number(i.precio_costo ?? i.precio ?? 0),
-    stock_minimo: Number(i.stock_minimo ?? 0),
-    punto_reorden: Number(i.punto_reorden ?? 0),
-    fk_id_categoria: i.fk_id_categoria ?? undefined
-  };
+export interface ApiMetadatos {
+  name: string;
+  version: string;
 }
 
-/** Normaliza un Proveedor (backend devuelve snake_case) */
-function normalizeProveedor(p: any): Proveedor {
-  return {
-    id_proveedor: p.id_proveedor,
-    ID_Proveedor: p.id_proveedor,
-    nombre: p.nombre_empresa,
-    nombre_empresa: p.nombre_empresa,
-    Nombre_Empresa: p.nombre_empresa,
-    rif: p.identificacion_rif,
-    identificacion_rif: p.identificacion_rif,
-    Identificacion_RIF: p.identificacion_rif,
-    contacto: p.nombre_encargado,
-    nombre_encargado: p.nombre_encargado,
-    Nombre_Encargado: p.nombre_encargado,
-    telefono: p.telefono_empresa,
-    telefono_empresa: p.telefono_empresa,
-    Telefono_Empresa: p.telefono_empresa,
-    email: p.email_empresa,
-    email_empresa: p.email_empresa,
-    Email_Empresa: p.email_empresa,
-    ciudad: p.ciudad,
-    Ciudad: p.ciudad,
-    direccion: p.direccion,
-    Direccion: p.direccion
-  };
+// ─────────────────────────────────────────────────────────────
+// TIPOS — Respuestas envueltas
+// ─────────────────────────────────────────────────────────────
+
+export interface MensajeResponse {
+  message: string;
+}
+
+/** Las rutas de creación de Platos y Mesas responden { message, data }. */
+interface ConDatos<T> extends MensajeResponse {
+  data: T;
+}
+
+export interface ActualizarEstatusOrdenResponse extends MensajeResponse {
+  id_pedido: number;
+  Estatus_Orden: EstatusOrden;
+}
+
+// ─────────────────────────────────────────────────────────────
+// CLIENTE HTTP
+// ─────────────────────────────────────────────────────────────
+
+/**
+ * Error de la API con el status y el cuerpo crudo, para que las vistas puedan
+ * distinguir casos concretos (409 de conflicto, 404, etc.) sin parsear strings.
+ */
+export class ApiError extends Error {
+  readonly status: number;
+  readonly body: unknown;
+
+  constructor(message: string, status: number, body: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
+/** Formas de error que devuelve el backend, según la ruta. */
+interface CuerpoDeError {
+  message?: string;
+  error?: string;
+  errors?: { msg?: string; path?: string }[];
+}
+
+/** Extrae el mensaje legible de cualquiera de las tres formas de error. */
+function mensajeDeError(cuerpo: unknown, status: number): string {
+  const e = (cuerpo ?? {}) as CuerpoDeError;
+
+  if (Array.isArray(e.errors)) {
+    const detalle = e.errors
+      .map(v => v?.msg)
+      .filter(Boolean)
+      .join(" · ");
+    if (detalle) return detalle;
+  }
+
+  return e.message || e.error || `La API respondió con un error (HTTP ${status})`;
+}
+
+// ─────────────────────────────────────────────────────────────
+// NORMALIZACIÓN NUMÉRICA
+// El driver de MySQL serializa las columnas DECIMAL como string ("3500.00"),
+// así que los campos numéricos se convierten al entrar y los tipos de arriba
+// siguen siendo ciertos en tiempo de ejecución (`precio.toFixed()` no revienta).
+// ─────────────────────────────────────────────────────────────
+
+function aNumero(valor: unknown): number {
+  const n = Number(valor);
+  return Number.isFinite(n) ? n : 0;
+}
+
+const normalizarPlato = (p: Plato): Plato => ({ ...p, precio: aNumero(p.precio) });
+
+const normalizarInsumo = (i: Insumo): Insumo => ({
+  ...i,
+  stock_actual: aNumero(i.stock_actual),
+  stock_minimo: aNumero(i.stock_minimo),
+  punto_reorden: aNumero(i.punto_reorden)
+});
+
+const normalizarOrden = (o: Orden): Orden => ({
+  ...o,
+  subtotal: aNumero(o.subtotal),
+  iva: aNumero(o.iva),
+  total: aNumero(o.total),
+  items: (o.items ?? []).map(item => ({
+    ...item,
+    precio_unitario: aNumero(item.precio_unitario),
+    subtotal: aNumero(item.subtotal)
+  }))
+});
+
+const normalizarFactura = (f: Factura): Factura => ({
+  ...f,
+  subtotal: aNumero(f.subtotal),
+  impuesto: aNumero(f.impuesto),
+  total: aNumero(f.total)
+});
+
+type Metodo = "GET" | "POST" | "PUT" | "DELETE";
+
+interface OpcionesRequest {
+  method?: Metodo;
+  body?: unknown;
+  query?: Record<string, string | number | undefined>;
+  /** Las rutas de /ordenes no llevan API key. */
+  publica?: boolean;
+}
+
+function construirUrl(
+  path: string,
+  query?: Record<string, string | number | undefined>
+): string {
+  const url = `${API_ROOT}${path}`;
+  if (!query) return url;
+
+  const params = new URLSearchParams();
+  for (const [clave, valor] of Object.entries(query)) {
+    if (valor !== undefined && valor !== "") params.set(clave, String(valor));
+  }
+  const qs = params.toString();
+  return qs ? `${url}?${qs}` : url;
+}
+
+async function request<T>(path: string, opciones: OpcionesRequest = {}): Promise<T> {
+  const { method = "GET", body, query, publica = false } = opciones;
+
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (body !== undefined) headers["Content-Type"] = "application/json";
+  if (!publica) headers["x-api-key"] = API_KEY;
+
+  let response: Response;
+  try {
+    response = await fetch(construirUrl(path, query), {
+      method,
+      headers,
+      body: body === undefined ? undefined : JSON.stringify(body)
+    });
+  } catch (error: unknown) {
+    const detalle = error instanceof Error ? error.message : "Error de red";
+    throw new ApiError(`No se pudo contactar con la API (${detalle})`, 0, null);
+  }
+
+  // Algunas respuestas (y varios errores de infraestructura) no traen JSON.
+  const texto = await response.text();
+  let json: unknown = null;
+  if (texto) {
+    try {
+      json = JSON.parse(texto);
+    } catch {
+      if (!response.ok) {
+        throw new ApiError(
+          `La API respondió con un error (HTTP ${response.status})`,
+          response.status,
+          texto
+        );
+      }
+    }
+  }
+
+  if (!response.ok) {
+    throw new ApiError(mensajeDeError(json, response.status), response.status, json);
+  }
+
+  return json as T;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -213,242 +392,152 @@ function normalizeProveedor(p: any): Proveedor {
 // ─────────────────────────────────────────────────────────────
 
 export const api = {
-  // ── Órdenes / Pedidos (endpoint público — sin API key) ────
-  getOrdenes: (): Promise<Orden[]> =>
-    fetch(`${BASE}/api/v1/ordenes`, { headers: PUBLIC_HEADERS }).then(r =>
-      handleResponse(r, "Error cargando órdenes")
+  // ── Metadatos ────────────────────────────────────────────
+  getMetadatos: (): Promise<ApiMetadatos> => request("/"),
+
+  // ── Órdenes / Comandas (rutas públicas, sin API key) ─────
+  getOrdenes: (estatus?: EstatusOrden | "activo"): Promise<Orden[]> =>
+    request<Orden[]>("/ordenes", { query: { estatus }, publica: true }).then(o =>
+      o.map(normalizarOrden)
     ),
 
+  /** Órdenes del tablero de cocina: recibido, preparando o listo. */
   getOrdenesActivas: (): Promise<Orden[]> =>
-    fetch(`${BASE}/api/v1/ordenes?estatus=activo`, {
-      headers: PUBLIC_HEADERS
-    }).then(r => handleResponse(r, "Error cargando órdenes activas")),
+    request<Orden[]>("/ordenes", {
+      query: { estatus: "activo" },
+      publica: true
+    }).then(o => o.map(normalizarOrden)),
 
-  getOrdenPorId: (id: number): Promise<Orden> =>
-    fetch(`${BASE}/api/v1/ordenes/${id}`, { headers: PUBLIC_HEADERS }).then(r =>
-      handleResponse(r, "Error consultando orden")
+  getOrden: (id: number): Promise<Orden> =>
+    request<Orden>(`/ordenes/${id}`, { publica: true }).then(normalizarOrden),
+
+  /**
+   * Crea la orden con sus líneas de detalle. El estatus inicial ("recibido") lo
+   * asigna el backend, y el nombre y el precio de cada ítem se toman del menú.
+   */
+  crearOrden: (data: CrearOrdenInput): Promise<Orden> =>
+    request<Orden>("/ordenes", { method: "POST", body: data, publica: true }).then(
+      normalizarOrden
     ),
 
-  /**
-   * Crea una orden. Adapta el payload al formato que espera el backend del equipo:
-   * { cliente_nombre, cliente_cedula, cliente_telefono, tipo, mesa?, direccion?, items[] }
-   */
-  crearOrden: (data: Partial<Orden> | any): Promise<Orden> => {
-    const payload = {
-      cliente_nombre: data.cliente_nombre ?? data.nombre_cliente ?? "Cliente Consumidor",
-      cliente_cedula: data.cliente_cedula ?? data.cedula_cliente ?? "V-00000000",
-      cliente_telefono: data.cliente_telefono ?? data.telefono ?? "0000000000",
-      tipo: data.tipo_pedido ?? data.tipo ?? "mesa",
-      mesa: data.id_mesa ?? data.mesa ?? undefined,
-      direccion: data.direccion_envio ?? data.direccion ?? undefined,
-      items: (data.items ?? data.detalles ?? []).map((it: any) => ({
-        id_producto: it.id_plato ?? it.id_producto,
-        cantidad: it.cantidad,
-        notas: it.notas ?? undefined
-      }))
-    };
-    return fetch(`${BASE}/api/v1/ordenes`, {
-      method: "POST",
-      headers: PUBLIC_HEADERS,
-      body: JSON.stringify(payload)
-    }).then(r => handleResponse(r, "Error creando orden"));
-  },
-
-  updateEstatus: (id: number, estatus: EstatusOrden): Promise<void> =>
-    fetch(`${BASE}/api/v1/ordenes/${id}`, {
+  actualizarEstatusOrden: (
+    id: number,
+    estatus: EstatusOrden
+  ): Promise<ActualizarEstatusOrdenResponse> =>
+    request(`/ordenes/${id}`, {
       method: "PUT",
-      headers: PUBLIC_HEADERS,
-      body: JSON.stringify({
-        Estatus_Orden: estatus,
-        estado_orden: estatus
-      })
-    }).then(r => {
-      handleResponse(r, "Error actualizando estado de orden");
+      body: { Estatus_Orden: estatus },
+      publica: true
     }),
 
-  /**
-   * Cancela la orden. El backend del equipo hace soft-delete
-   * (cambia estado_orden = 'cancelado'), no elimina el registro.
-   */
-  cancelarOrden: (id: number): Promise<void> =>
-    fetch(`${BASE}/api/v1/ordenes/${id}`, {
-      method: "DELETE",
-      headers: PUBLIC_HEADERS
-    }).then(r => {
-      handleResponse(r, "Error cancelando la orden");
-    }),
+  /** Soft-delete: marca la orden como "cancelado", no borra el registro. */
+  cancelarOrden: (id: number): Promise<MensajeResponse> =>
+    request(`/ordenes/${id}`, { method: "DELETE", publica: true }),
 
-  getProductos: (): Promise<Producto[]> =>
-    fetch(`${BASE}/api/v1/platos`, { headers: AUTH_HEADERS })
-      .then(r => handleResponse(r, "Error cargando catálogo de platos"))
-      .then((rows: any) => (Array.isArray(rows) ? rows : []).map(normalizePlato)),
+  // ── Platos / Menú ────────────────────────────────────────
+  getPlatos: (): Promise<Plato[]> =>
+    request<Plato[]>("/platos").then(p => p.map(normalizarPlato)),
 
-  // ── Platos / Menú (requiere API key) ─────────────────────
-  getPlatos: (): Promise<Producto[]> =>
-    fetch(`${BASE}/api/v1/platos`, { headers: AUTH_HEADERS })
-      .then(r => handleResponse(r, "Error cargando platos"))
-      .then((rows: any) => (Array.isArray(rows) ? rows : []).map(normalizePlato)),
+  getPlato: (id: number): Promise<Plato> =>
+    request<Plato>(`/platos/${id}`).then(normalizarPlato),
 
-  /**
-   * Crea un plato. El backend responde { message, data } y, ante errores de
-   * validación (400), { errors: [{ msg, path }] } — los concatenamos para
-   * mostrarle al usuario qué campo está mal.
-   */
-  crearPlato: (data: {
-    nombre: string;
-    descripcion: string;
-    precio: number;
-    categoria: CategoriaPlato;
-  }): Promise<Producto> =>
-    fetch(`${BASE}/api/v1/platos`, {
-      method: "POST",
-      headers: AUTH_HEADERS,
-      body: JSON.stringify({
-        nombre: data.nombre,
-        descripcion: data.descripcion,
-        precio: Number(data.precio),
-        categoria: data.categoria
-      })
-    }).then(async r => {
-      const body = await r.json().catch(() => null);
-      if (!r.ok) {
-        const detalle = Array.isArray(body?.errors)
-          ? body.errors
-              .map((e: any) => e?.msg)
-              .filter(Boolean)
-              .join(" · ")
-          : body?.message;
-        throw new Error(detalle || `Error creando el plato (HTTP ${r.status})`);
-      }
-      return normalizePlato(body?.data ?? body);
-    }),
+  crearPlato: (data: PlatoInput): Promise<Plato> =>
+    request<ConDatos<Plato>>("/platos", { method: "POST", body: data }).then(r =>
+      normalizarPlato(r.data)
+    ),
 
-  deletePlato: (id: number): Promise<void> =>
-    fetch(`${BASE}/api/v1/platos/${id}`, {
-      method: "DELETE",
-      headers: AUTH_HEADERS
-    }).then(async r => {
-      if (r.ok) return;
-      const body = await r.json().catch(() => null);
-      throw new Error(body?.message || `Error eliminando el plato (HTTP ${r.status})`);
-    }),
+  /** Falla con 409 si el plato ya forma parte de una orden o receta. */
+  eliminarPlato: (id: number): Promise<Plato> =>
+    request<ConDatos<Plato>>(`/platos/${id}`, { method: "DELETE" }).then(r =>
+      normalizarPlato(r.data)
+    ),
 
-  // ── Inventario (requiere API key) ────────────────────────
-  getInventario: (): Promise<ItemInventario[]> =>
-    fetch(`${BASE}/api/v1/inventario`, { headers: AUTH_HEADERS })
-      .then(r => handleResponse(r, "Error cargando inventario"))
-      .then((rows: any) => (Array.isArray(rows) ? rows : []).map(normalizeInsumo)),
+  // ── Mesas ────────────────────────────────────────────────
+  getMesas: (): Promise<Mesa[]> => request("/mesas"),
 
-  crearItem: (data: any): Promise<ItemInventario> =>
-    fetch(`${BASE}/api/v1/inventario`, {
-      method: "POST",
-      headers: AUTH_HEADERS,
-      body: JSON.stringify({
-        nombre_insumo: data.nombre ?? data.Nombre_Insumo ?? data.nombre_insumo,
-        stock_actual: data.stock ?? data.Stock_Actual ?? data.stock_actual ?? 0,
-        unidad_medida: data.unidad ?? data.Unidad_Medida ?? data.unidad_medida ?? "Kg",
-        stock_minimo: data.stock_minimo ?? data.Stock_Minimo ?? 0,
-        punto_reorden: data.punto_reorden ?? data.Punto_Reorden ?? 0,
-        fk_id_categoria: data.fk_id_categoria ?? null
-      })
-    })
-      .then(r => handleResponse(r, "Error creando ítem de inventario"))
-      .then(normalizeInsumo),
+  getMesa: (id: number): Promise<Mesa> => request(`/mesas/${id}`),
 
-  updateItem: (id: number, data: any): Promise<ItemInventario> =>
-    fetch(`${BASE}/api/v1/inventario/${id}`, {
+  crearMesa: (data: MesaInput): Promise<Mesa> =>
+    request<ConDatos<Mesa>>("/mesas", { method: "POST", body: data }).then(r => r.data),
+
+  // ── Inventario / Insumos ─────────────────────────────────
+  getInventario: (): Promise<Insumo[]> =>
+    request<Insumo[]>("/inventario").then(i => i.map(normalizarInsumo)),
+
+  getInsumo: (id: number): Promise<Insumo> =>
+    request<Insumo>(`/inventario/${id}`).then(normalizarInsumo),
+
+  crearInsumo: (data: InsumoInput): Promise<Insumo> =>
+    request<Insumo>("/inventario", { method: "POST", body: data }).then(normalizarInsumo),
+
+  actualizarInsumo: (id: number, data: Partial<InsumoInput>): Promise<Insumo> =>
+    request<Insumo>(`/inventario/${id}`, { method: "PUT", body: data }).then(
+      normalizarInsumo
+    ),
+
+  /** Falla con 409 si el insumo está vinculado a proveedores o recetas. */
+  eliminarInsumo: (id: number): Promise<MensajeResponse> =>
+    request(`/inventario/${id}`, { method: "DELETE" }),
+
+  // ── Proveedores ──────────────────────────────────────────
+  getProveedores: (): Promise<Proveedor[]> => request("/proveedores"),
+
+  getProveedor: (id: number): Promise<Proveedor> => request(`/proveedores/${id}`),
+
+  /** El RIF y el email deben ser únicos (409 si ya existen). */
+  crearProveedor: (data: ProveedorInput): Promise<Proveedor> =>
+    request("/proveedores", { method: "POST", body: data }),
+
+  actualizarProveedor: (id: number, data: Partial<ProveedorInput>): Promise<Proveedor> =>
+    request(`/proveedores/${id}`, { method: "PUT", body: data }),
+
+  /** Falla con 409 si el proveedor tiene compras o insumos asociados. */
+  eliminarProveedor: (id: number): Promise<MensajeResponse> =>
+    request(`/proveedores/${id}`, { method: "DELETE" }),
+
+  // ── Facturas ─────────────────────────────────────────────
+  getFacturas: (): Promise<Factura[]> =>
+    request<Factura[]>("/facturas").then(f => f.map(normalizarFactura)),
+
+  getFactura: (numFactura: number): Promise<Factura> =>
+    request<Factura>(`/facturas/${numFactura}`).then(normalizarFactura),
+
+  /** Cobra un pedido: calcula el subtotal desde el detalle real y emite la factura. */
+  crearFactura: (data: FacturaInput): Promise<Factura> =>
+    request<Factura>("/facturas", { method: "POST", body: data }).then(normalizarFactura),
+
+  /** El swagger no documenta el cuerpo de la respuesta; solo el 200. */
+  actualizarEstadoPago: (
+    numFactura: number,
+    estadoPago: EstadoPago
+  ): Promise<MensajeResponse> =>
+    request(`/facturas/${numFactura}/estado-pago`, {
       method: "PUT",
-      headers: AUTH_HEADERS,
-      body: JSON.stringify({
-        nombre_insumo: data.nombre ?? data.Nombre_Insumo ?? data.nombre_insumo,
-        stock_actual: data.stock ?? data.Stock_Actual ?? data.stock_actual,
-        unidad_medida: data.unidad ?? data.Unidad_Medida ?? data.unidad_medida,
-        stock_minimo: data.stock_minimo ?? data.Stock_Minimo,
-        punto_reorden: data.punto_reorden ?? data.Punto_Reorden,
-        fk_id_categoria: data.fk_id_categoria
-      })
-    })
-      .then(r => handleResponse(r, "Error actualizando ítem de inventario"))
-      .then(normalizeInsumo),
-
-  deleteItem: (id: number): Promise<void> =>
-    fetch(`${BASE}/api/v1/inventario/${id}`, {
-      method: "DELETE",
-      headers: AUTH_HEADERS
-    }).then(r => {
-      handleResponse(r, "Error eliminando ítem de inventario");
+      body: { estado_pago: estadoPago }
     }),
 
-  // ── Proveedores (requiere API key) ───────────────────────
-  // Nota: el endpoint de proveedores vive bajo /api/v1/inventario/proveedores
-  // si los compañeros no lo exponen, devuelve array vacío sin romper la UI.
-  getProveedores: (): Promise<Proveedor[]> =>
-    fetch(`${BASE}/api/v1/proveedores`, { headers: AUTH_HEADERS })
-      .then(r => {
-        if (!r.ok) return [];
-        return r.json().then((rows: any[]) => rows.map(normalizeProveedor));
-      })
-      .catch(() => []),
+  // ── Clientes ─────────────────────────────────────────────
+  getClientes: (): Promise<Cliente[]> => request("/clientes"),
 
-  crearProveedor: (data: any): Promise<Proveedor> =>
-    fetch(`${BASE}/api/v1/proveedores`, {
-      method: "POST",
-      headers: AUTH_HEADERS,
-      body: JSON.stringify({
-        nombre_empresa: data.nombre ?? data.Nombre_Empresa ?? data.nombre_empresa,
-        identificacion_rif:
-          data.rif ?? data.Identificacion_RIF ?? data.identificacion_rif,
-        ciudad: data.Ciudad ?? data.ciudad,
-        telefono_empresa: data.telefono ?? data.Telefono_Empresa ?? data.telefono_empresa,
-        email_empresa: data.email ?? data.Email_Empresa ?? data.email_empresa,
-        direccion: data.Direccion ?? data.direccion,
-        nombre_encargado: data.contacto ?? data.Nombre_Encargado ?? data.nombre_encargado
-      })
-    })
-      .then(r => handleResponse(r, "Error creando proveedor"))
-      .then(normalizeProveedor),
+  getCliente: (cedula: string): Promise<Cliente> =>
+    request(`/clientes/${encodeURIComponent(cedula)}`),
 
-  updateProveedor: (id: number, data: any): Promise<Proveedor> =>
-    fetch(`${BASE}/api/v1/proveedores/${id}`, {
-      method: "PUT",
-      headers: AUTH_HEADERS,
-      body: JSON.stringify({
-        nombre_empresa: data.nombre ?? data.Nombre_Empresa ?? data.nombre_empresa,
-        identificacion_rif:
-          data.rif ?? data.Identificacion_RIF ?? data.identificacion_rif,
-        ciudad: data.Ciudad ?? data.ciudad,
-        telefono_empresa: data.telefono ?? data.Telefono_Empresa ?? data.telefono_empresa,
-        email_empresa: data.email ?? data.Email_Empresa ?? data.email_empresa,
-        direccion: data.Direccion ?? data.direccion,
-        nombre_encargado: data.contacto ?? data.Nombre_Encargado ?? data.nombre_encargado
-      })
-    })
-      .then(r => handleResponse(r, "Error actualizando proveedor"))
-      .then(normalizeProveedor),
+  crearCliente: (data: ClienteInput): Promise<Cliente> =>
+    request("/clientes", { method: "POST", body: data }),
 
-  deleteProveedor: (id: number): Promise<void> =>
-    fetch(`${BASE}/api/v1/proveedores/${id}`, {
-      method: "DELETE",
-      headers: AUTH_HEADERS
-    }).then(r => {
-      handleResponse(r, "Error eliminando proveedor");
-    }),
+  // ── Reportes ─────────────────────────────────────────────
+  getResumenReporte: (): Promise<ReporteResumen> =>
+    request<ReporteResumen>("/reportes/resumen").then(r => ({
+      total_pedidos: aNumero(r.total_pedidos),
+      ingresos_brutos: aNumero(r.ingresos_brutos),
+      tiempo_promedio_seg: aNumero(r.tiempo_promedio_seg),
+      pct_cambio_pedidos: aNumero(r.pct_cambio_pedidos),
+      pct_cambio_ingresos: aNumero(r.pct_cambio_ingresos)
+    })),
 
-  // ── Reportes (requiere API key) ──────────────────────────
-  getResumen: (): Promise<ResumenReporte> =>
-    fetch(`${BASE}/api/v1/reportes/resumen`, {
-      headers: AUTH_HEADERS
-    }).then(r => handleResponse(r, "Error cargando resumen de reportes")),
-
-  getPedidosReporte: (params?: {
-    estado?: string;
-    periodo?: string;
-  }): Promise<Orden[]> => {
-    const qs = params
-      ? "?" + new URLSearchParams(params as Record<string, string>).toString()
-      : "";
-    return fetch(`${BASE}/api/v1/reportes/pedidos${qs}`, {
-      headers: AUTH_HEADERS
-    }).then(r => handleResponse(r, "Error cargando pedidos del reporte"));
-  }
+  /** Histórico de órdenes de compra a proveedores, no de comandas del salón. */
+  getPedidosReporte: (estado?: EstadoPedidoProveedor): Promise<ReportePedidoItem[]> =>
+    request<ReportePedidoItem[]>("/reportes/pedidos", { query: { estado } }).then(p =>
+      p.map(item => ({ ...item, total: aNumero(item.total) }))
+    )
 };

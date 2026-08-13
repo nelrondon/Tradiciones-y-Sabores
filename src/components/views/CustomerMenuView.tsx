@@ -1,26 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useState, useEffect } from "react";
 import {
-  Utensils,
-  ShoppingBag,
-  Search,
-  Sparkles,
-  CheckCircle2,
-  Clock,
-  MapPin,
-  Phone,
-  User,
-  CreditCard,
-  ChevronRight,
-  X,
-  Plus,
-  Minus,
-  Flame,
-  Award,
   AlertCircle,
-  RefreshCw
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  Minus,
+  Plus,
+  RefreshCw,
+  Search,
+  ShoppingBag,
+  Sparkles,
+  User,
+  Utensils,
+  X
 } from "lucide-react";
-import { api, Producto, Orden } from "../../api";
+import { useEffect, useState } from "react";
+import { api, Orden, Plato } from "../../api";
 import { useToast } from "../ui/Toast";
 
 const CATEGORIAS_DISPLAY = [
@@ -46,7 +41,7 @@ function formatCategoriaLabel(cat: string): string {
 }
 
 interface CartItem {
-  producto: Producto;
+  producto: Plato;
   cantidad: number;
   notas?: string;
 }
@@ -58,7 +53,7 @@ interface CustomerMenuViewProps {
 
 export default function CustomerMenuView(_props: CustomerMenuViewProps) {
   const toast = useToast();
-  const [productos, setProductos] = useState<Producto[]>([]);
+  const [productos, setProductos] = useState<Plato[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("todos");
@@ -96,7 +91,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
   const loadPlatos = async () => {
     try {
       setLoading(true);
-      const data = await api.getProductos();
+      const data = await api.getPlatos();
       setProductos(data);
     } catch (err: any) {
       toast.showToast("error", "No se pudo cargar el menú digital: " + err.message);
@@ -110,8 +105,8 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
     if (!activeOrder) return;
     const interval = setInterval(async () => {
       try {
-        const ticketId = activeOrder.num_ticket || activeOrder.id_pedido;
-        const updated = await api.getOrdenPorId(ticketId);
+        // GET /ordenes/{id} espera el id_pedido, no el número de ticket.
+        const updated = await api.getOrden(activeOrder.id_pedido);
         setActiveOrder(updated);
       } catch (e) {
         console.error("Error polling orden:", e);
@@ -121,12 +116,12 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
     return () => clearInterval(interval);
   }, [activeOrder]);
 
-  const addToCart = (prod: Producto) => {
+  const addToCart = (prod: Plato) => {
     setCart(prev => {
-      const existing = prev.find(item => item.producto.id_producto === prod.id_producto);
+      const existing = prev.find(item => item.producto.id_plato === prod.id_plato);
       if (existing) {
         return prev.map(item =>
-          item.producto.id_producto === prod.id_producto
+          item.producto.id_plato === prod.id_plato
             ? { ...item, cantidad: item.cantidad + 1 }
             : item
         );
@@ -141,7 +136,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
       prev =>
         prev
           .map(item => {
-            if (item.producto.id_producto === idProd) {
+            if (item.producto.id_plato === idProd) {
               const newQty = item.cantidad + delta;
               return newQty > 0 ? { ...item, cantidad: newQty } : null;
             }
@@ -180,31 +175,21 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
 
     try {
       setIsSubmitting(true);
-      const payload = {
-        tipo_pedido: tipoPedido,
+      // El backend toma el nombre y el precio de cada ítem del menú y calcula
+      // subtotal, IVA y total: solo enviamos cliente, tipo y líneas del pedido.
+      const res = await api.crearOrden({
         tipo: tipoPedido,
-        id_mesa: tipoPedido === "mesa" ? idMesa : null,
         mesa: tipoPedido === "mesa" ? idMesa : null,
-        cedula_cliente: cedula.trim(),
+        direccion: tipoPedido === "delivery" ? direccion.trim() : null,
         cliente_cedula: cedula.trim(),
         cliente_nombre: nombre.trim(),
         cliente_telefono: telefono.trim(),
-        direccion_envio: tipoPedido === "delivery" ? direccion.trim() : null,
-        direccion: tipoPedido === "delivery" ? direccion.trim() : null,
         items: cart.map(item => ({
-          id_plato: item.producto.id_plato || item.producto.id_producto,
-          id_producto: item.producto.id_plato || item.producto.id_producto,
-          nombre: item.producto.nombre,
+          id_producto: item.producto.id_plato,
           cantidad: item.cantidad,
-          precio_unitario: item.producto.precio,
-          subtotal: item.producto.precio * item.cantidad
-        })),
-        subtotal: cartSubtotal,
-        iva: cartIva,
-        total: cartTotal
-      };
-
-      const res = await api.crearOrden(payload);
+          notas: item.notas
+        }))
+      });
       setActiveOrder(res);
       setCart([]);
       setIsCartOpen(false);
@@ -231,9 +216,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
         .toLowerCase()
         .replace(/[^0-9a-z]/g, "");
       const matched = allOrders.filter(o => {
-        const c1 = (o.cliente_cedula ?? (o as any).cedula_cliente ?? "")
-          .toLowerCase()
-          .replace(/[^0-9a-z]/g, "");
+        const c1 = (o.cliente_cedula ?? "").toLowerCase().replace(/[^0-9a-z]/g, "");
         return c1.includes(queryClean) || queryClean.includes(c1);
       });
       // Ordenar de más reciente a más antiguo
@@ -354,7 +337,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
                   Progreso de Preparación:
                 </span>
                 <span className="text-xs font-black text-primary capitalize">
-                  {activeOrder.estado_orden || activeOrder.Estatus_Orden}
+                  {activeOrder.Estatus_Orden}
                 </span>
               </div>
               <div className="w-full bg-surface-container-high h-3.5 rounded-full overflow-hidden p-0.5">
@@ -362,11 +345,9 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
                   className="bg-gradient-to-r from-amber-500 via-primary to-emerald-500 h-full rounded-full transition-all duration-700"
                   style={{
                     width:
-                      activeOrder.estado_orden?.toLowerCase() === "recibido" ||
-                      activeOrder.Estatus_Orden?.toLowerCase() === "recibido"
+                      activeOrder.Estatus_Orden === "recibido"
                         ? "33%"
-                        : activeOrder.estado_orden?.toLowerCase() === "preparando" ||
-                            activeOrder.Estatus_Orden?.toLowerCase() === "preparando"
+                        : activeOrder.Estatus_Orden === "preparando"
                           ? "66%"
                           : "100%"
                   }}
@@ -376,8 +357,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
               <div className="grid grid-cols-3 gap-2 text-center mt-3 text-xs font-bold">
                 <div
                   className={
-                    activeOrder.estado_orden?.toLowerCase() === "recibido" ||
-                    activeOrder.Estatus_Orden?.toLowerCase() === "recibido"
+                    activeOrder.Estatus_Orden === "recibido"
                       ? "text-primary"
                       : "text-outline"
                   }
@@ -386,8 +366,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
                 </div>
                 <div
                   className={
-                    activeOrder.estado_orden?.toLowerCase() === "preparando" ||
-                    activeOrder.Estatus_Orden?.toLowerCase() === "preparando"
+                    activeOrder.Estatus_Orden === "preparando"
                       ? "text-amber-500"
                       : "text-outline"
                   }
@@ -396,8 +375,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
                 </div>
                 <div
                   className={
-                    activeOrder.estado_orden?.toLowerCase() === "listo" ||
-                    activeOrder.Estatus_Orden?.toLowerCase() === "listo"
+                    activeOrder.Estatus_Orden === "listo"
                       ? "text-emerald-500"
                       : "text-outline"
                   }
@@ -483,7 +461,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProductos.map(prod => (
                 <div
-                  key={prod.id_producto}
+                  key={prod.id_plato}
                   className="bg-surface-container rounded-2xl overflow-hidden border border-outline-variant/30 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col group"
                 >
                   <div className="relative h-44 bg-gradient-to-br from-amber-500/10 via-primary/5 to-surface-container-highest flex items-center justify-center p-6 text-center">
@@ -567,7 +545,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
                   <div className="space-y-3">
                     {cart.map(item => (
                       <div
-                        key={item.producto.id_producto}
+                        key={item.producto.id_plato}
                         className="bg-surface-container-low p-4 rounded-xl border border-outline-variant/30 flex items-center justify-between gap-3"
                       >
                         <div className="flex-1">
@@ -581,14 +559,14 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
 
                         <div className="flex items-center gap-2 bg-surface p-1 rounded-lg border border-outline-variant/40">
                           <button
-                            onClick={() => updateQuantity(item.producto.id_producto, -1)}
+                            onClick={() => updateQuantity(item.producto.id_plato, -1)}
                             className="p-1 hover:bg-surface-container rounded text-outline"
                           >
                             <Minus className="w-3.5 h-3.5" />
                           </button>
                           <span className="text-xs font-bold px-2">{item.cantidad}</span>
                           <button
-                            onClick={() => updateQuantity(item.producto.id_producto, 1)}
+                            onClick={() => updateQuantity(item.producto.id_plato, 1)}
                             className="p-1 hover:bg-surface-container rounded text-primary"
                           >
                             <Plus className="w-3.5 h-3.5" />
@@ -861,11 +839,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
                     Pedidos Encontrados ({foundOrders.length}):
                   </div>
                   {foundOrders.map(o => {
-                    const estatus = (
-                      o.estado_orden ||
-                      o.Estatus_Orden ||
-                      "recibido"
-                    ).toLowerCase();
+                    const estatus = (o.Estatus_Orden || "recibido").toLowerCase();
                     let badgeBg = "bg-blue-100 text-blue-800 border-blue-300";
                     let badgeIcon = "🟦";
                     let badgeLabel = "Recibido";
@@ -914,7 +888,7 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
                           <p>
                             <span className="font-semibold text-on-surface">Tipo:</span>{" "}
                             {o.tipo === "mesa"
-                              ? `Mesa #${o.mesa || o.id_mesa || 1}`
+                              ? `Mesa #${o.mesa ?? 1}`
                               : o.tipo === "delivery"
                                 ? "Delivery"
                                 : "Para Llevar"}

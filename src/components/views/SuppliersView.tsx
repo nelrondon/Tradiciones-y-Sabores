@@ -11,16 +11,16 @@ import {
   X,
   Save
 } from "lucide-react";
-import { api, type Proveedor } from "../../api";
+import { api, type Proveedor, type ProveedorInput } from "../../api";
 
-type FormData = Omit<Proveedor, "id_proveedor">;
+type FormData = ProveedorInput;
 
 const FORM_INICIAL: FormData = {
-  nombre: "",
-  rif: "",
-  contacto: "",
-  telefono: "",
-  email: "",
+  nombre_empresa: "",
+  identificacion_rif: "",
+  nombre_encargado: "",
+  telefono_empresa: "",
+  email_empresa: "",
   ciudad: "",
   direccion: ""
 };
@@ -43,12 +43,15 @@ function ModalProveedor({
   guardando: boolean;
 }) {
   const set = (k: keyof FormData, v: string) => setForm({ ...form, [k]: v });
+  // La API exige los siete campos al registrar un proveedor.
   const esValido =
-    form.nombre?.trim() &&
-    form.rif?.trim() &&
-    form.telefono?.trim() &&
-    form.ciudad?.trim() &&
-    form.direccion?.trim();
+    form.nombre_empresa.trim() &&
+    form.identificacion_rif.trim() &&
+    form.nombre_encargado.trim() &&
+    form.telefono_empresa.trim() &&
+    form.email_empresa.trim() &&
+    form.ciudad.trim() &&
+    form.direccion.trim();
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 fade-in">
@@ -70,8 +73,8 @@ function ModalProveedor({
               Nombre del Proveedor <span className="text-error">*</span>
             </label>
             <input
-              value={form.nombre}
-              onChange={e => set("nombre", e.target.value)}
+              value={form.nombre_empresa}
+              onChange={e => set("nombre_empresa", e.target.value)}
               className="industrial-input"
               placeholder="Ej. Distribuidora La Central"
             />
@@ -82,19 +85,19 @@ function ModalProveedor({
                 RIF <span className="text-error">*</span>
               </label>
               <input
-                value={form.rif}
-                onChange={e => set("rif", e.target.value)}
+                value={form.identificacion_rif}
+                onChange={e => set("identificacion_rif", e.target.value)}
                 className="industrial-input"
                 placeholder="J-12345678-0"
               />
             </div>
             <div>
               <label className="text-xs font-bold text-on-surface-variant uppercase mb-1.5 block">
-                Contacto
+                Contacto <span className="text-error">*</span>
               </label>
               <input
-                value={form.contacto}
-                onChange={e => set("contacto", e.target.value)}
+                value={form.nombre_encargado}
+                onChange={e => set("nombre_encargado", e.target.value)}
                 className="industrial-input"
                 placeholder="Carlos López"
               />
@@ -106,8 +109,8 @@ function ModalProveedor({
                 Teléfono <span className="text-error">*</span>
               </label>
               <input
-                value={form.telefono}
-                onChange={e => set("telefono", e.target.value)}
+                value={form.telefono_empresa}
+                onChange={e => set("telefono_empresa", e.target.value)}
                 type="tel"
                 className="industrial-input"
                 placeholder="0414-0000000"
@@ -115,11 +118,11 @@ function ModalProveedor({
             </div>
             <div>
               <label className="text-xs font-bold text-on-surface-variant uppercase mb-1.5 block">
-                Email
+                Email <span className="text-error">*</span>
               </label>
               <input
-                value={form.email}
-                onChange={e => set("email", e.target.value)}
+                value={form.email_empresa}
+                onChange={e => set("email_empresa", e.target.value)}
                 type="email"
                 className="industrial-input"
                 placeholder="ventas@empresa.com"
@@ -132,7 +135,7 @@ function ModalProveedor({
                 Ciudad <span className="text-error">*</span>
               </label>
               <input
-                value={form.ciudad || ""}
+                value={form.ciudad}
                 onChange={e => set("ciudad", e.target.value)}
                 className="industrial-input"
                 placeholder="Ej. Caracas"
@@ -143,7 +146,7 @@ function ModalProveedor({
                 Dirección <span className="text-error">*</span>
               </label>
               <input
-                value={form.direccion || ""}
+                value={form.direccion}
                 onChange={e => set("direccion", e.target.value)}
                 className="industrial-input"
                 placeholder="Ej. Av. Principal"
@@ -213,13 +216,13 @@ export default function SuppliersView() {
   const abrirEditar = (p: Proveedor) => {
     setEditando(p);
     setForm({
-      nombre: p.nombre || "",
-      rif: p.rif || "",
-      contacto: p.contacto || "",
-      telefono: p.telefono || "",
-      email: p.email ?? "",
-      ciudad: p.ciudad ?? "",
-      direccion: p.direccion ?? ""
+      nombre_empresa: p.nombre_empresa,
+      identificacion_rif: p.identificacion_rif,
+      nombre_encargado: p.nombre_encargado,
+      telefono_empresa: p.telefono_empresa,
+      email_empresa: p.email_empresa,
+      ciudad: p.ciudad,
+      direccion: p.direccion
     });
     setShowModal(true);
   };
@@ -227,8 +230,8 @@ export default function SuppliersView() {
   const guardar = async () => {
     setGuardando(true);
     try {
-      if (editando && editando.id_proveedor) {
-        const updated = await api.updateProveedor(editando.id_proveedor, form);
+      if (editando) {
+        const updated = await api.actualizarProveedor(editando.id_proveedor, form);
         setProveedores(prev =>
           prev.map(p => (p.id_proveedor === updated.id_proveedor ? updated : p))
         );
@@ -248,7 +251,7 @@ export default function SuppliersView() {
     if (!confirm("¿Eliminar este proveedor? Esta acción no se puede deshacer.")) return;
     setEliminando(id);
     try {
-      await api.deleteProveedor(id);
+      await api.eliminarProveedor(id);
       setProveedores(prev => prev.filter(p => p.id_proveedor !== id));
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : "Error al eliminar");
@@ -320,28 +323,28 @@ export default function SuppliersView() {
                     key={p.id_proveedor}
                     className="border-b border-outline-variant/50 last:border-0 hover:bg-surface-container-low transition-colors fade-in-up"
                   >
-                    <td className="p-4 font-bold text-on-surface">{p.nombre}</td>
+                    <td className="p-4 font-bold text-on-surface">{p.nombre_empresa}</td>
                     <td className="p-4 text-center font-mono text-sm text-on-surface-variant">
-                      {p.rif}
+                      {p.identificacion_rif}
                     </td>
                     <td className="p-4 text-center text-on-surface">
-                      {p.contacto || "—"}
+                      {p.nombre_encargado || "—"}
                     </td>
                     <td className="p-4 text-center font-mono text-sm">
                       <a
-                        href={`tel:${p.telefono}`}
+                        href={`tel:${p.telefono_empresa}`}
                         className="text-secondary-container hover:underline"
                       >
-                        {p.telefono}
+                        {p.telefono_empresa}
                       </a>
                     </td>
                     <td className="p-4 text-center text-sm">
-                      {p.email ? (
+                      {p.email_empresa ? (
                         <a
-                          href={`mailto:${p.email}`}
+                          href={`mailto:${p.email_empresa}`}
                           className="text-secondary-container hover:underline"
                         >
-                          {p.email}
+                          {p.email_empresa}
                         </a>
                       ) : (
                         <span className="text-on-surface-variant">—</span>
@@ -356,7 +359,7 @@ export default function SuppliersView() {
                           <Edit2 size={16} />
                         </button>
                         <button
-                          onClick={() => p.id_proveedor && eliminar(p.id_proveedor)}
+                          onClick={() => eliminar(p.id_proveedor)}
                           disabled={eliminando === p.id_proveedor}
                           className="text-on-surface-variant hover:text-error transition-colors p-1 disabled:opacity-50"
                         >

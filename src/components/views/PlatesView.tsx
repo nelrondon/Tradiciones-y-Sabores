@@ -10,7 +10,7 @@ import {
   X,
   Save
 } from "lucide-react";
-import { api, type Producto, type CategoriaPlato } from "../../api";
+import { api, type Plato, type CategoriaPlato } from "../../api";
 import { useToast } from "../ui/Toast";
 
 interface FormData {
@@ -28,7 +28,7 @@ const FORM_INICIAL: FormData = {
 };
 
 /** Categorías válidas según la API (POST /platos) */
-const CATEGORIAS: { id: string; label: string }[] = [
+const CATEGORIAS: { id: CategoriaPlato; label: string }[] = [
   { id: "entrada", label: "Entrada" },
   { id: "plato_principal", label: "Plato Principal" },
   { id: "postre", label: "Postre" },
@@ -127,7 +127,7 @@ function ModalPlato({
               </label>
               <select
                 value={form.categoria}
-                onChange={e => set("categoria", e.target.value)}
+                onChange={e => set("categoria", e.target.value as CategoriaPlato)}
                 className="industrial-input"
               >
                 {CATEGORIAS.map(c => (
@@ -176,7 +176,7 @@ function ModalPlato({
 
 export default function PlatesView() {
   const { showToast } = useToast();
-  const [platos, setPlatos] = useState<Producto[]>([]);
+  const [platos, setPlatos] = useState<Plato[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showModal, setShowModal] = useState(false);
@@ -237,8 +237,8 @@ export default function PlatesView() {
       return;
     setEliminando(id);
     try {
-      await api.deletePlato(id);
-      setPlatos(prev => prev.filter(p => (p.id_plato ?? p.id_producto) !== id));
+      await api.eliminarPlato(id);
+      setPlatos(prev => prev.filter(p => p.id_plato !== id));
       showToast("success", "Plato eliminado", `${nombre} ya no está en el menú.`);
     } catch (e: unknown) {
       showToast(
@@ -339,8 +339,8 @@ export default function PlatesView() {
                   </td>
                 </tr>
               ) : (
-                visibles.map((plato, idx) => {
-                  const platoId = plato.id_plato ?? plato.id_producto ?? idx + 1;
+                visibles.map(plato => {
+                  const platoId = plato.id_plato;
                   return (
                     <tr
                       key={platoId}
@@ -356,7 +356,7 @@ export default function PlatesView() {
                         </span>
                       </td>
                       <td className="p-4 text-center font-mono font-black text-lg text-primary">
-                        ${Number(plato.precio ?? 0).toFixed(2)}
+                        ${plato.precio.toFixed(2)}
                       </td>
                       <td className="p-4 text-center">
                         {plato.disponible ? (

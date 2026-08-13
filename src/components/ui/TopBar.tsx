@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useSelectedLayoutSegment } from "next/navigation";
 import { Bell, Search, ChefHat, Menu, Monitor, Copy, Check } from "lucide-react";
+import Link from "next/link";
 
 interface TopBarProps {
   onOpenSidebar: () => void;
@@ -42,26 +43,6 @@ export default function TopBar({ onOpenSidebar }: TopBarProps) {
     return () => clearInterval(id);
   }, []);
 
-  const copyCustomerLink = () => {
-    const url = `${window.location.origin}/?view=menu`;
-    try {
-      const el = document.createElement("textarea");
-      el.value = url;
-      el.style.position = "fixed";
-      el.style.top = "-9999px";
-      el.style.left = "-9999px";
-      document.body.appendChild(el);
-      el.focus();
-      el.select();
-      document.execCommand("copy");
-      document.body.removeChild(el);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      window.prompt("Copia este link para compartir con los clientes:", url);
-    }
-  };
-
   return (
     <header className="bg-white border-b border-outline-variant sticky top-0 z-30 flex justify-between items-center w-full px-6 h-14 shrink-0 shadow-sm">
       <div className="flex items-center gap-3">
@@ -85,59 +66,13 @@ export default function TopBar({ onOpenSidebar }: TopBarProps) {
         </span>
       )}
 
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-xl p-1 shadow-sm">
-          <button
-            onClick={() =>
-              window.open(
-                "/?view=menu",
-                "_blank",
-                "width=1024,height=768,noopener,noreferrer"
-              )
-            }
-            title="Abrir menú cliente en ventana separada para monitor externo o tablet"
-            className="flex items-center gap-1.5 bg-amber-500 text-white hover:bg-amber-600 font-extrabold px-3 py-1.5 rounded-lg text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
-          >
-            <Monitor size={14} />
-            <span>Pantalla Cliente ↗</span>
-          </button>
-          <button
-            onClick={copyCustomerLink}
-            title="Copiar link del menú cliente para enviar a los clientes"
-            className={`flex items-center gap-1.5 font-bold px-3 py-1.5 rounded-lg text-xs transition-all active:scale-95 cursor-pointer ${
-              copied
-                ? "bg-emerald-500 text-white"
-                : "bg-white text-amber-700 hover:bg-amber-100 border border-amber-300"
-            }`}
-          >
-            {copied ? <Check size={13} /> : <Copy size={13} />}
-            <span>{copied ? "¡Copiado!" : "Copiar Link"}</span>
-          </button>
-        </div>
-
-        <div className="relative hidden xl:block">
-          <Search
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-outline"
-          />
-          <input
-            type="text"
-            placeholder="Buscar pedidos..."
-            className="pl-8 pr-4 h-8 w-44 bg-surface-container-low border border-outline-variant rounded-lg focus:border-secondary-container focus:ring-1 focus:ring-secondary-container/40 outline-none text-xs text-on-surface transition-colors placeholder:text-outline"
-          />
-        </div>
-
-        <div className="hidden md:flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">
-            En línea
-          </span>
-        </div>
-
-        <button className="w-8 h-8 flex items-center justify-center hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant relative">
-          <Bell size={17} />
-        </button>
-      </div>
+      <Link
+        href="/"
+        className="flex items-center gap-1.5 bg-amber-500 text-white hover:bg-amber-600 font-extrabold px-3 py-1.5 rounded-lg text-xs transition-all active:scale-95 cursor-pointer shadow-sm"
+      >
+        <Monitor size={14} />
+        <span>Ir al menú de clientes ↗</span>
+      </Link>
     </header>
   );
 }

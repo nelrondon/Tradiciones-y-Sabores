@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "../styles/globals.css";
 import { Inter } from "next/font/google";
+import { ToastProvider } from "@/components/ui/Toast";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -9,7 +10,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Tradiciones y Sabores — Sistema de Gestión"
+  title: {
+    template: "Tradiciones y Sabores | %s",
+    default: "Tradiciones y Sabores"
+  }
 };
 
 export default function RootLayout({
@@ -19,7 +23,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`antialiased ${inter.className}`}>{children}</body>
+      <body className={`antialiased ${inter.className}`}>
+        <ToastProvider>{children}</ToastProvider>
+      </body>
     </html>
   );
 }

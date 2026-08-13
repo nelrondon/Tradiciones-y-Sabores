@@ -21,8 +21,7 @@ const FORM_INICIAL: FormData = {
   stock_actual: 0,
   unidad_medida: "kg",
   stock_minimo: 0,
-  punto_reorden: 0,
-  fk_id_categoria: 1
+  punto_reorden: 0
 };
 
 const UNIDADES = ["kg", "g", "L", "mL", "unidad", "paquete", "caja", "bolsa", "litro"];
@@ -134,19 +133,6 @@ function ModalItem({
               />
             </div>
           </div>
-
-          <div>
-            <label className="text-xs font-bold text-on-surface-variant uppercase mb-1.5 block">
-              Categoría (ID) <span className="text-error">*</span>
-            </label>
-            <input
-              value={form.fk_id_categoria}
-              onChange={e => set("fk_id_categoria", Number(e.target.value))}
-              type="number"
-              min="1"
-              className="industrial-input"
-            />
-          </div>
         </div>
 
         {/* Footer */}
@@ -219,8 +205,7 @@ export default function InventoryView() {
       stock_actual: item.stock_actual,
       unidad_medida: item.unidad_medida,
       stock_minimo: item.stock_minimo,
-      punto_reorden: item.punto_reorden,
-      fk_id_categoria: item.fk_id_categoria
+      punto_reorden: item.punto_reorden
     });
     setShowModal(true);
   };
@@ -364,7 +349,7 @@ export default function InventoryView() {
                       <td className="p-4 text-center font-mono text-on-surface-variant">
                         {reordenVal}
                       </td>
-                      <td className="p-4">
+                      <td className="p-4 text-center">
                         {bajo ? (
                           <span className="inline-flex items-center gap-1 bg-error-container text-on-error-container text-xs font-bold px-2 py-1 rounded">
                             <AlertTriangle size={12} /> Stock Bajo

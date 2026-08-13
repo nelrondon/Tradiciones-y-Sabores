@@ -145,7 +145,6 @@ export interface InsumoInput {
   unidad_medida: string;
   stock_minimo?: number;
   punto_reorden?: number;
-  fk_id_categoria: number;
 }
 
 export interface Proveedor {

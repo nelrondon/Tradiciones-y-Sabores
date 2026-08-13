@@ -104,6 +104,7 @@ function ModalPlato({
               rows={3}
               className="industrial-input resize-none"
               placeholder="Ej. Camarones frescos marinados en limón, cebolla morada y cilantro"
+              style={{ height: "60px" }}
             />
           </div>
 

@@ -107,7 +107,7 @@ body {
   background-color: var(--color-surface-container-lowest);
   border: 1.5px solid var(--color-outline-variant);
   border-radius: 8px;
-  padding: 0 14px;
+  padding: 7px 14px;
   color: var(--color-on-surface);
   font-size: 0.875rem;
   transition:

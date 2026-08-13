@@ -13,7 +13,7 @@ import {
   Trash2
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { api, type Plato } from "../../api";
+import { api, type EstadoMesa, type Mesa, type Plato } from "../../api";
 import { useToast } from "../ui/Toast";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
@@ -41,6 +41,24 @@ interface InfoCliente {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+
+const ESTADO_MESA_LABEL: Record<EstadoMesa, string> = {
+  disponible: "Disponible",
+  ocupada: "Ocupada",
+  reservada: "Reservada",
+  fuera_de_servicio: "Fuera de servicio"
+};
+
+function formatEstadoMesa(estado: EstadoMesa): string {
+  return ESTADO_MESA_LABEL[estado] ?? estado;
+}
+
+/** "Mesa 4 — Terraza · 4 pers. (Ocupada)" */
+function formatMesaOption(m: Mesa): string {
+  const detalles = [m.ubicacion, `${m.capacidad} pers.`].filter(Boolean).join(" · ");
+  const estado = m.estado === "disponible" ? "" : ` (${formatEstadoMesa(m.estado)})`;
+  return `Mesa ${m.id_mesa}${detalles ? ` — ${detalles}` : ""}${estado}`;
+}
 
 function formatCategoriaLabel(cat: string): string {
   if (!cat) return "General";
@@ -119,6 +137,11 @@ export default function PosView() {
   const [mesa, setMesa] = useState("");
   const [direccion, setDireccion] = useState("");
 
+  // Mesas del salón (para el selector cuando el pedido es de tipo "mesa")
+  const [mesas, setMesas] = useState<Mesa[]>([]);
+  const [loadingMesas, setLoadingMesas] = useState(true);
+  const [errorMesas, setErrorMesas] = useState<string | null>(null);
+
   // Estado del envío
   const [enviando, setEnviando] = useState(false);
   const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
@@ -142,6 +165,15 @@ export default function PosView() {
       .finally(() => setLoadingProductos(false));
   }, []);
 
+  // ── Fetch mesas ──
+  useEffect(() => {
+    api
+      .getMesas()
+      .then(data => setMesas(Array.isArray(data) ? data : []))
+      .catch((e: Error) => setErrorMesas(e?.message ?? "Error al cargar las mesas"))
+      .finally(() => setLoadingMesas(false));
+  }, []);
+
   // ── Derivados ──
   const safeProds = Array.isArray(productos) ? productos : [];
   const categorias = [
@@ -161,6 +193,8 @@ export default function PosView() {
   );
   const iva = subtotal * IVA_RATE;
   const total = subtotal + iva;
+  const mesasOrdenadas = [...mesas].sort((a, b) => a.id_mesa - b.id_mesa);
+  const mesaSeleccionada = mesasOrdenadas.find(m => String(m.id_mesa) === mesa) ?? null;
 
   // ── Manejo del carrito ──
   const agregarAlCarrito = (producto: Plato) => {
@@ -180,7 +214,9 @@ export default function PosView() {
   const cambiarCantidad = (id: number, delta: number) =>
     setCarrito(prev =>
       prev
-        .map(i => (i.producto.id_plato === id ? { ...i, cantidad: i.cantidad + delta } : i))
+        .map(i =>
+          i.producto.id_plato === id ? { ...i, cantidad: i.cantidad + delta } : i
+        )
         .filter(i => i.cantidad > 0)
     );
 
@@ -494,24 +530,63 @@ export default function PosView() {
 
             {/* Campos dinámicos por tipo */}
             <div className="mt-3 min-h-[52px]">
-              {orderType === "mesa" && (
-                <div className="flex gap-3">
-                  <div className="w-20">
-                    <input
-                      type="number"
+              {orderType === "mesa" &&
+                (loadingMesas ? (
+                  <div className="flex items-center gap-2 text-xs text-on-surface-variant font-medium py-3">
+                    <Loader2 size={14} className="animate-spin shrink-0" />
+                    <span>Cargando mesas...</span>
+                  </div>
+                ) : mesasOrdenadas.length === 0 ? (
+                  // Sin catálogo de mesas (error de red o salón sin registrar):
+                  // se permite escribir el número a mano para no bloquear la venta.
+                  <div className="flex gap-3">
+                    <div className="w-20">
+                      <input
+                        type="number"
+                        value={mesa}
+                        onChange={e => setMesa(e.target.value)}
+                        placeholder="Mesa"
+                        className="industrial-input text-center font-bold"
+                        min={1}
+                      />
+                    </div>
+                    <div className="flex-1 flex items-center gap-2 text-xs text-on-surface-variant font-medium">
+                      <AlertTriangle size={14} className="shrink-0" />
+                      <span>
+                        {errorMesas
+                          ? "No se pudieron cargar las mesas. Ingrese el número manualmente."
+                          : "No hay mesas registradas. Ingrese el número manualmente."}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <select
                       value={mesa}
                       onChange={e => setMesa(e.target.value)}
-                      placeholder="Mesa"
-                      className="industrial-input text-center font-bold"
-                      min={1}
-                    />
+                      className="industrial-input font-bold"
+                    >
+                      <option value="">Seleccione una mesa...</option>
+                      {mesasOrdenadas.map(m => (
+                        <option
+                          key={m.id_mesa}
+                          value={String(m.id_mesa)}
+                          disabled={m.estado === "fuera_de_servicio"}
+                        >
+                          {formatMesaOption(m)}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="flex items-center gap-2 text-xs text-on-surface-variant font-medium">
+                      <Info size={14} className="shrink-0" />
+                      <span>
+                        {mesaSeleccionada
+                          ? `${formatEstadoMesa(mesaSeleccionada.estado)} · Capacidad ${mesaSeleccionada.capacidad} · ${mesaSeleccionada.ubicacion}`
+                          : "Seleccione la mesa asignada al cliente."}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex-1 flex items-center gap-2 text-xs text-on-surface-variant font-medium">
-                    <Info size={14} className="shrink-0" />
-                    <span>Ingrese el número de la mesa asignada.</span>
-                  </div>
-                </div>
-              )}
+                ))}
 
               {orderType === "pickup" && (
                 <div className="flex items-center gap-2 text-xs text-on-surface-variant font-medium py-3">
@@ -577,7 +652,7 @@ export default function PosView() {
                       actualizarNotas(item.producto.id_plato, e.target.value)
                     }
                     placeholder="Notas especiales (ej. sin cebolla)"
-                    className="w-full text-xs bg-surface-container border-b border-outline outline-none py-1 focus:border-secondary-container transition-colors placeholder:text-outline/60 text-on-surface"
+                    className="rounded-tl-md rounded-tr-md p-3 w-full text-xs bg-surface-container border-b border-outline outline-none py-1 focus:border-secondary-container transition-colors placeholder:text-outline/60 text-on-surface"
                   />
                 </div>
 

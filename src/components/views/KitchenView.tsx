@@ -151,7 +151,7 @@ function TarjetaOrden({
   const esListo = orden.Estatus_Orden === "listo";
 
   useEffect(() => {
-    const id = setInterval(() => setMins(minutosDesde(orden.hora_creacion)), 30_000);
+    const id = setInterval(() => setMins(minutosDesde(orden.hora_creacion)), 5_000);
     return () => clearInterval(id);
   }, [orden.hora_creacion]);
 
@@ -323,7 +323,7 @@ export default function KitchenView() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     cargarOrdenes();
-    const intervalo = setInterval(cargarOrdenes, 30_000);
+    const intervalo = setInterval(cargarOrdenes, 5_000);
     return () => clearInterval(intervalo);
   }, [cargarOrdenes]);
 

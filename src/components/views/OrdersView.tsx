@@ -17,12 +17,10 @@ import { useToast } from "../ui/Toast";
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function BadgeEstatus({ estatus }: { estatus: EstatusOrden }) {
-  const estilos: Record<EstatusOrden, string> = {
+  const estilos: Partial<Record<EstatusOrden, string>> = {
     recibido: "bg-surface-dim text-on-surface-variant border border-outline-variant",
     preparando: "bg-[#fbbf24] text-black",
-    listo: "bg-[#10b981] text-white",
-    cancelado: "",
-    entregado: ""
+    listo: "bg-[#10b981] text-white"
   };
   return (
     <span
@@ -227,7 +225,9 @@ export default function OrdersView() {
                 : "bg-surface-container border border-outline-variant text-on-surface-variant hover:bg-surface-variant"
             }`}
           >
-            {e === "" ? `Todos (${ordenes.length})` : `${e} (${conteo(e)})`}
+            {e === ""
+              ? `Todos (${ordenes.length})`
+              : `${e[0].toUpperCase()}${e.slice(1)} (${conteo(e)})`}
           </button>
         ))}
       </div>

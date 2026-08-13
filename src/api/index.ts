@@ -232,6 +232,18 @@ interface ConDatos<T> extends MensajeResponse {
   data: T;
 }
 
+/**
+ * Devuelve el recurso tanto si la ruta lo envuelve en { message, data } como si
+ * responde el objeto pelado. Se usa en las rutas cuyo cuerpo de respuesta no está
+ * documentado en el swagger.
+ */
+function desenvolver<T>(respuesta: T | ConDatos<T>): T {
+  if (respuesta && typeof respuesta === "object" && "data" in respuesta) {
+    return (respuesta as ConDatos<T>).data;
+  }
+  return respuesta as T;
+}
+
 export interface ActualizarEstatusOrdenResponse extends MensajeResponse {
   id_pedido: number;
   Estatus_Orden: EstatusOrden;
@@ -459,6 +471,33 @@ export const api = {
 
   crearMesa: (data: MesaInput): Promise<Mesa> =>
     request<ConDatos<Mesa>>("/mesas", { method: "POST", body: data }).then(r => r.data),
+
+  /**
+   * Actualiza los datos de una mesa.
+   *
+   * ⚠️ El swagger todavía no documenta esta ruta; se asume el mismo patrón que
+   * /inventario y /proveedores (PUT sobre el recurso, con actualización parcial).
+   */
+  actualizarMesa: (id: number, data: Partial<MesaInput>): Promise<Mesa> =>
+    request<Mesa | ConDatos<Mesa>>(`/mesas/${id}`, { method: "PUT", body: data }).then(
+      desenvolver
+    ),
+
+  /** Atajo para el caso más común: cambiar solo el estado de la mesa. */
+  actualizarEstadoMesa: (id: number, estado: EstadoMesa): Promise<Mesa> =>
+    request<Mesa | ConDatos<Mesa>>(`/mesas/${id}`, {
+      method: "PUT",
+      body: { estado }
+    }).then(desenvolver),
+
+  /**
+   * Elimina una mesa.
+   *
+   * ⚠️ Ruta asumida (no documentada en el swagger). Se espera un 409 si la mesa
+   * tiene órdenes asociadas, igual que /platos y /inventario.
+   */
+  eliminarMesa: (id: number): Promise<MensajeResponse> =>
+    request(`/mesas/${id}`, { method: "DELETE" }),
 
   // ── Inventario / Insumos ─────────────────────────────────
   getInventario: (): Promise<Insumo[]> =>

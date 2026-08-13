@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Route } from "next";
 import {
+  Armchair,
   ChefHat,
   PlusCircle,
   ReceiptText,
@@ -32,6 +33,7 @@ const navItems: NavItem[] = [
   { href: "/gestion/pedidos", label: "Pedidos", icon: ReceiptText },
   { href: "/gestion/cocina", label: "Cocina", icon: Utensils },
   { href: "/gestion/platos", label: "Platos", icon: UtensilsCrossed },
+  { href: "/gestion/mesas", label: "Mesas", icon: Armchair },
   { href: "/gestion/inventario", label: "Inventario", icon: Package },
   { href: "/gestion/proveedores", label: "Proveedores", icon: Truck },
   { href: "/gestion/informes", label: "Informes", icon: BarChart2 }

@@ -13,6 +13,7 @@ const LABELS: Record<string, string> = {
   pedidos: "Pedidos",
   cocina: "Panel de Cocina",
   platos: "Platos",
+  mesas: "Mesas",
   inventario: "Inventario",
   proveedores: "Proveedores",
   informes: "Reportes y Datos"
@@ -20,7 +21,6 @@ const LABELS: Record<string, string> = {
 
 export default function TopBar({ onOpenSidebar }: TopBarProps) {
   const segment = useSelectedLayoutSegment();
-  console.log(segment);
 
   const currentLabel = (segment && LABELS[segment]) ?? segment ?? "";
 

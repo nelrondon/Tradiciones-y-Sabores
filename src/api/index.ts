@@ -11,9 +11,19 @@ const API_KEY = import.meta.env.VITE_API_KEY || '';
 const PUBLIC_HEADERS = { 'Content-Type': 'application/json' };
 const AUTH_HEADERS   = { 'Content-Type': 'application/json', 'x-api-key': API_KEY };
 
-function check(r: Response, msg: string): Response {
-  if (!r.ok) throw new Error(`${msg} (HTTP ${r.status})`);
-  return r;
+async function handleResponse(response: Response, message: string): Promise<any> {
+  let json;
+  try {
+    json = await response.json();
+  } catch (error: any) {
+    const message = error && error.message ? error.message : null;
+    throw new Error(`${message} (${message || "Desconocido"})`);
+  }
+
+  if (!response.ok) {
+    throw new Error(`${message}: ${(json?.message || json?.error || json?.required_error) || "Desconocido"}`);
+  }
+  return json;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -190,15 +200,15 @@ export const api = {
   // ── Órdenes / Pedidos (endpoint público — sin API key) ────
   getOrdenes: (): Promise<Orden[]> =>
     fetch(`${BASE}/api/v1/ordenes`, { headers: PUBLIC_HEADERS })
-      .then(r => check(r, 'Error cargando órdenes').json()),
+      .then(r => handleResponse(r, 'Error cargando órdenes')),
 
   getOrdenesActivas: (): Promise<Orden[]> =>
     fetch(`${BASE}/api/v1/ordenes?estatus=activo`, { headers: PUBLIC_HEADERS })
-      .then(r => check(r, 'Error cargando órdenes activas').json()),
+      .then(r => handleResponse(r, 'Error cargando órdenes activas')),
 
   getOrdenPorId: (id: number): Promise<Orden> =>
     fetch(`${BASE}/api/v1/ordenes/${id}`, { headers: PUBLIC_HEADERS })
-      .then(r => check(r, 'Error consultando orden').json()),
+      .then(r => handleResponse(r, 'Error consultando orden')),
 
   /**
    * Crea una orden. Adapta el payload al formato que espera el backend del equipo:
@@ -222,7 +232,7 @@ export const api = {
       method:  'POST',
       headers: PUBLIC_HEADERS,
       body:    JSON.stringify(payload),
-    }).then(r => check(r, 'Error creando orden').json());
+    }).then(r => handleResponse(r, 'Error creando orden'));
   },
 
   updateEstatus: (id: number, estatus: EstatusOrden): Promise<void> =>
@@ -230,7 +240,7 @@ export const api = {
       method:  'PUT',
       headers: PUBLIC_HEADERS,
       body:    JSON.stringify({ Estatus_Orden: estatus, estado_orden: estatus }),
-    }).then(r => { check(r, 'Error actualizando estado de orden'); }),
+    }).then(r => { handleResponse(r, 'Error actualizando estado de orden'); }),
 
   /**
    * Cancela la orden. El backend del equipo hace soft-delete
@@ -240,17 +250,17 @@ export const api = {
     fetch(`${BASE}/api/v1/ordenes/${id}`, {
       method:  'DELETE',
       headers: PUBLIC_HEADERS,
-    }).then(r => { check(r, 'Error cancelando la orden'); }),
+    }).then(r => { handleResponse(r, 'Error cancelando la orden'); }),
 
   getProductos: (): Promise<Producto[]> =>
     fetch(`${BASE}/api/v1/platos`, { headers: AUTH_HEADERS })
-      .then(r => check(r, 'Error cargando catálogo de platos').json())
+      .then(r => handleResponse(r, 'Error cargando catálogo de platos'))
       .then((rows: any) => (Array.isArray(rows) ? rows : []).map(normalizePlato)),
 
   // ── Platos / Menú (requiere API key) ─────────────────────
   getPlatos: (): Promise<Producto[]> =>
     fetch(`${BASE}/api/v1/platos`, { headers: AUTH_HEADERS })
-      .then(r => check(r, 'Error cargando platos').json())
+      .then(r => handleResponse(r, 'Error cargando platos'))
       .then((rows: any) => (Array.isArray(rows) ? rows : []).map(normalizePlato)),
 
   /**
@@ -274,7 +284,7 @@ export const api = {
         categoria:   data.categoria,
       }),
     }).then(async r => {
-      const body = await r.json().catch(() => null);
+      const body = await r.catch(() => null);
       if (!r.ok) {
         const detalle = Array.isArray(body?.errors)
           ? body.errors.map((e: any) => e?.msg).filter(Boolean).join(' · ')
@@ -288,14 +298,14 @@ export const api = {
     fetch(`${BASE}/api/v1/platos/${id}`, { method: 'DELETE', headers: AUTH_HEADERS })
       .then(async r => {
         if (r.ok) return;
-        const body = await r.json().catch(() => null);
+        const body = await r.catch(() => null);
         throw new Error(body?.message || `Error eliminando el plato (HTTP ${r.status})`);
       }),
 
   // ── Inventario (requiere API key) ────────────────────────
   getInventario: (): Promise<ItemInventario[]> =>
     fetch(`${BASE}/api/v1/inventario`, { headers: AUTH_HEADERS })
-      .then(r => check(r, 'Error cargando inventario').json())
+      .then(r => handleResponse(r, 'Error cargando inventario'))
       .then((rows: any) => (Array.isArray(rows) ? rows : []).map(normalizeInsumo)),
 
   crearItem: (data: any): Promise<ItemInventario> =>
@@ -310,7 +320,7 @@ export const api = {
         punto_reorden:   data.punto_reorden ?? data.Punto_Reorden ?? 0,
         fk_id_categoria: data.fk_id_categoria ?? null,
       }),
-    }).then(r => check(r, 'Error creando ítem de inventario').json())
+    }).then(r => handleResponse(r, 'Error creando ítem de inventario'))
       .then(normalizeInsumo),
 
   updateItem: (id: number, data: any): Promise<ItemInventario> =>
@@ -325,12 +335,12 @@ export const api = {
         punto_reorden:   data.punto_reorden ?? data.Punto_Reorden,
         fk_id_categoria: data.fk_id_categoria,
       }),
-    }).then(r => check(r, 'Error actualizando ítem de inventario').json())
+    }).then(r => handleResponse(r, 'Error actualizando ítem de inventario'))
       .then(normalizeInsumo),
 
   deleteItem: (id: number): Promise<void> =>
     fetch(`${BASE}/api/v1/inventario/${id}`, { method: 'DELETE', headers: AUTH_HEADERS })
-      .then(r => { check(r, 'Error eliminando ítem de inventario'); }),
+      .then(r => { handleResponse(r, 'Error eliminando ítem de inventario'); }),
 
   // ── Proveedores (requiere API key) ───────────────────────
   // Nota: el endpoint de proveedores vive bajo /api/v1/inventario/proveedores
@@ -339,7 +349,7 @@ export const api = {
     fetch(`${BASE}/api/v1/proveedores`, { headers: AUTH_HEADERS })
       .then(r => {
         if (!r.ok) return [];
-        return r.json().then((rows: any[]) => rows.map(normalizeProveedor));
+        return r.then((rows: any[]) => rows.map(normalizeProveedor));
       })
       .catch(() => []),
 
@@ -356,7 +366,7 @@ export const api = {
         direccion:         data.Direccion       ?? data.direccion,
         nombre_encargado:  data.contacto        ?? data.Nombre_Encargado   ?? data.nombre_encargado,
       }),
-    }).then(r => check(r, 'Error creando proveedor').json())
+    }).then(r => handleResponse(r, 'Error creando proveedor'))
       .then(normalizeProveedor),
 
   updateProveedor: (id: number, data: any): Promise<Proveedor> =>
@@ -372,23 +382,23 @@ export const api = {
         direccion:         data.Direccion       ?? data.direccion,
         nombre_encargado:  data.contacto        ?? data.Nombre_Encargado   ?? data.nombre_encargado,
       }),
-    }).then(r => check(r, 'Error actualizando proveedor').json())
+    }).then(r => handleResponse(r, 'Error actualizando proveedor'))
       .then(normalizeProveedor),
 
   deleteProveedor: (id: number): Promise<void> =>
     fetch(`${BASE}/api/v1/proveedores/${id}`, { method: 'DELETE', headers: AUTH_HEADERS })
-      .then(r => { check(r, 'Error eliminando proveedor'); }),
+      .then(r => { handleResponse(r, 'Error eliminando proveedor'); }),
 
   // ── Reportes (requiere API key) ──────────────────────────
   getResumen: (): Promise<ResumenReporte> =>
     fetch(`${BASE}/api/v1/reportes/resumen`, { headers: AUTH_HEADERS })
-      .then(r => check(r, 'Error cargando resumen de reportes').json()),
+      .then(r => handleResponse(r, 'Error cargando resumen de reportes')),
 
   getPedidosReporte: (params?: { estado?: string; periodo?: string }): Promise<Orden[]> => {
     const qs = params
       ? '?' + new URLSearchParams(params as Record<string, string>).toString()
       : '';
     return fetch(`${BASE}/api/v1/reportes/pedidos${qs}`, { headers: AUTH_HEADERS })
-      .then(r => check(r, 'Error cargando pedidos del reporte').json());
+      .then(r => handleResponse(r, 'Error cargando pedidos del reporte'));
   },
 };

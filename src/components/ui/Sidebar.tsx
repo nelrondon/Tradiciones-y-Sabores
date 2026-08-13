@@ -9,8 +9,8 @@ import {
   BarChart2,
   Settings,
   LogOut,
-  X,
-} from 'lucide-react';
+  X
+} from "lucide-react";
 
 interface SidebarProps {
   currentView: string;
@@ -20,27 +20,27 @@ interface SidebarProps {
 }
 
 const navItems = [
-  { id: 'orders',    label: 'Pedidos',      icon: ReceiptText },
-  { id: 'kitchen',   label: 'Cocina',       icon: Utensils },
-  { id: 'plates',    label: 'Platos',       icon: UtensilsCrossed },
-  { id: 'inventory', label: 'Inventario',   icon: Package },
-  { id: 'suppliers', label: 'Proveedores',  icon: Truck },
-  { id: 'reports',   label: 'Informes',     icon: BarChart2 },
+  { id: "orders", label: "Pedidos", icon: ReceiptText },
+  { id: "kitchen", label: "Cocina", icon: Utensils },
+  { id: "plates", label: "Platos", icon: UtensilsCrossed },
+  { id: "inventory", label: "Inventario", icon: Package },
+  { id: "suppliers", label: "Proveedores", icon: Truck },
+  { id: "reports", label: "Informes", icon: BarChart2 }
 ];
 
 export default function Sidebar({ currentView, setView, isOpen, onClose }: SidebarProps) {
   return (
     <nav
-      style={{ background: 'linear-gradient(180deg, #1a110d 0%, #211510 100%)' }}
+      style={{ background: "linear-gradient(180deg, #1a110d 0%, #211510 100%)" }}
       className={`h-screen w-64 fixed left-0 top-0 flex flex-col p-5 z-40 border-r border-white/5 transition-transform duration-300 ease-in-out md:translate-x-0 ${
-        isOpen ? 'translate-x-0' : '-translate-x-full'
+        isOpen ? "translate-x-0" : "-translate-x-full"
       }`}
     >
       {/* ── Logo ─────────────────────────────────────── */}
       <div className="mb-7 flex items-center justify-between px-1">
         <div className="flex items-center gap-3">
           <div
-            style={{ background: 'linear-gradient(135deg, #e8601a, #c44d0e)' }}
+            style={{ background: "linear-gradient(135deg, #e8601a, #c44d0e)" }}
             className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 shadow-lg"
           >
             <ChefHat size={21} color="#fff" />
@@ -66,8 +66,8 @@ export default function Sidebar({ currentView, setView, isOpen, onClose }: Sideb
 
       {/* ── Botón CTA ────────────────────────────────── */}
       <button
-        onClick={() => setView('pos')}
-        style={{ background: 'linear-gradient(135deg, #e8601a, #c44d0e)' }}
+        onClick={() => setView("pos")}
+        style={{ background: "linear-gradient(135deg, #e8601a, #c44d0e)" }}
         className="text-white text-sm font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 mb-6 hover:opacity-90 active:scale-95 transition-all h-12 uppercase tracking-wide shadow-lg shadow-orange-900/30"
       >
         <PlusCircle size={18} />
@@ -89,20 +89,20 @@ export default function Sidebar({ currentView, setView, isOpen, onClose }: Sideb
               onClick={() => setView(id)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
                 isActive
-                  ? 'bg-white/10 text-white'
-                  : 'text-white/50 hover:bg-white/5 hover:text-white/80'
+                  ? "bg-white/10 text-white"
+                  : "text-white/50 hover:bg-white/5 hover:text-white/80"
               }`}
             >
               <Icon
                 size={18}
-                color={isActive ? '#e8601a' : 'currentColor'}
+                color={isActive ? "#e8601a" : "currentColor"}
                 className="shrink-0"
               />
               <span>{label}</span>
               {isActive && (
                 <div
                   className="ml-auto w-1.5 h-4 rounded-full"
-                  style={{ background: '#e8601a' }}
+                  style={{ background: "#e8601a" }}
                 />
               )}
             </button>

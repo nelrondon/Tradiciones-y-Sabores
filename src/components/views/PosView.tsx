@@ -1,17 +1,25 @@
-import { useState, useEffect } from 'react';
 import {
-  UserPlus, Timer, Armchair, ShoppingBag, Bike, Info,
-  Trash2, Send, Plus, Minus, Loader2, AlertTriangle, MessageCircle, Search, Printer,
-} from 'lucide-react';
-import { api, type Producto } from '../api';
-import { useToast } from '../components/Toast';
+  AlertTriangle,
+  Info,
+  Loader2,
+  MessageCircle,
+  Minus,
+  Plus,
+  Search,
+  Send,
+  ShoppingBag,
+  Trash2
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { api, type Producto } from "../../api";
+import { useToast } from "../ui/Toast";
 
 // ── Constantes ────────────────────────────────────────────────────────────────
 
 const IVA_RATE = 0.16;
 
 /** Número WhatsApp del restaurante, configurable en .env.local */
-const WA_NUMERO = import.meta.env.VITE_WHATSAPP_NUMERO ?? '584140000000';
+const WA_NUMERO = process.env.NEXT_PUBLIC_WHATSAPP_NUMERO ?? "584140000000";
 
 /** Genera un número de ticket único basado en timestamp */
 const nuevoTicketId = () => `T-${Date.now().toString(36).toUpperCase().slice(-6)}`;
@@ -32,23 +40,22 @@ interface InfoCliente {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-let ticketCounter = 9000 + Math.floor(Math.random() * 999);
 function formatCategoriaLabel(cat: string): string {
-  if (!cat) return 'General';
-  const c = cat.toLowerCase().replace(/_/g, ' ');
-  if (c === 'todos') return 'Todos los Platos';
-  if (c === 'plato principal' || c === 'platos principales') return 'Platos Principales';
-  if (c === 'bebida' || c === 'bebidas') return 'Bebidas';
-  if (c === 'postre' || c === 'postres') return 'Postres';
-  if (c === 'adicional' || c === 'adicionales') return 'Adicionales';
+  if (!cat) return "General";
+  const c = cat.toLowerCase().replace(/_/g, " ");
+  if (c === "todos") return "Todos los Platos";
+  if (c === "plato principal" || c === "platos principales") return "Platos Principales";
+  if (c === "bebida" || c === "bebidas") return "Bebidas";
+  if (c === "postre" || c === "postres") return "Postres";
+  if (c === "adicional" || c === "adicionales") return "Adicionales";
   return c.charAt(0).toUpperCase() + c.slice(1);
 }
 
 function generarMensajeWA(
-  ticketId: number,
+  ticketId: string,
   cliente: InfoCliente,
   carrito: ItemCarrito[],
-  orderType: 'mesa' | 'pickup' | 'delivery',
+  orderType: "mesa" | "pickup" | "delivery",
   mesa: string,
   direccion: string,
   subtotal: number,
@@ -56,25 +63,25 @@ function generarMensajeWA(
   total: number
 ): string {
   const tipoLabel =
-    orderType === 'mesa'
+    orderType === "mesa"
       ? `🪑 Mesa ${mesa}`
-      : orderType === 'pickup'
-      ? '🛍️ Para Llevar'
-      : `🛵 Delivery: ${direccion}`;
+      : orderType === "pickup"
+        ? "🛍️ Para Llevar"
+        : `🛵 Delivery: ${direccion}`;
 
   const items = carrito
     .map(
-      (i) =>
+      i =>
         `• ${i.cantidad}x ${i.producto.nombre}` +
-        (i.notas ? ` _(${i.notas.toUpperCase()})_` : '')
+        (i.notas ? ` _(${i.notas.toUpperCase()})_` : "")
     )
-    .join('\n');
+    .join("\n");
 
   return (
     `🍔 *NUEVO PEDIDO #${ticketId}*\n\n` +
     `*Cliente:* ${cliente.nombre}\n` +
-    `*Teléfono:* ${cliente.telefono || '—'}\n` +
-    `*Cédula/RIF:* ${cliente.cedula || '—'}\n` +
+    `*Teléfono:* ${cliente.telefono || "—"}\n` +
+    `*Cédula/RIF:* ${cliente.cedula || "—"}\n` +
     `*Tipo:* ${tipoLabel}\n\n` +
     `*Ítems:*\n${items}\n\n` +
     `Subtotal: $${subtotal.toFixed(2)}\n` +
@@ -92,23 +99,23 @@ export default function PosView() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [loadingProductos, setLoadingProductos] = useState(true);
   const [errorProductos, setErrorProductos] = useState<string | null>(null);
-  const [categoriaActiva, setCategoriaActiva] = useState('');
-  const [busqueda, setBusqueda] = useState('');
+  const [categoriaActiva, setCategoriaActiva] = useState("");
+  const [busqueda, setBusqueda] = useState("");
 
   // Carrito
   const [carrito, setCarrito] = useState<ItemCarrito[]>([]);
 
   // Formulario de cliente
   const [cliente, setCliente] = useState<InfoCliente>({
-    nombre: '',
-    cedula: '',
-    telefono: '',
+    nombre: "",
+    cedula: "",
+    telefono: ""
   });
 
   // Tipo de pedido
-  const [orderType, setOrderType] = useState<'mesa' | 'pickup' | 'delivery'>('mesa');
-  const [mesa, setMesa] = useState('');
-  const [direccion, setDireccion] = useState('');
+  const [orderType, setOrderType] = useState<"mesa" | "pickup" | "delivery">("mesa");
+  const [mesa, setMesa] = useState("");
+  const [direccion, setDireccion] = useState("");
 
   // Estado del envío
   const [enviando, setEnviando] = useState(false);
@@ -116,76 +123,99 @@ export default function PosView() {
   const [ticketActual] = useState(() => nuevoTicketId());
 
   // Navegación responsiva en móviles: Catálogo vs Carrito
-  const [activeMobileTab, setActiveMobileTab] = useState<'catalog' | 'cart'>('catalog');
+  const [activeMobileTab, setActiveMobileTab] = useState<"catalog" | "cart">("catalog");
 
   // ── Fetch catálogo ──
   // ── Fetch catálogo ──
   useEffect(() => {
-    api.getProductos()
-      .then((data) => {
+    api
+      .getProductos()
+      .then(data => {
         const safeData = Array.isArray(data) ? data : [];
         setProductos(safeData);
         if (safeData.length > 0 && safeData[0]?.categoria) {
           setCategoriaActiva(safeData[0].categoria);
         }
       })
-      .catch((e: Error) => setErrorProductos(e?.message ?? 'Error al cargar productos'))
+      .catch((e: Error) => setErrorProductos(e?.message ?? "Error al cargar productos"))
       .finally(() => setLoadingProductos(false));
   }, []);
 
   // ── Derivados ──
   const safeProds = Array.isArray(productos) ? productos : [];
-  const categorias = [...new Set(safeProds.map((p) => p?.categoria ?? 'plato_principal'))] as string[];
+  const categorias = [
+    ...new Set(safeProds.map(p => p?.categoria ?? "plato_principal"))
+  ] as string[];
   const productosFiltrados = safeProds
-    .filter((p) => (p?.categoria ?? 'plato_principal') === categoriaActiva)
-    .filter((p) =>
-      busqueda === '' ||
-      (p?.nombre ?? '').toLowerCase().includes(busqueda.toLowerCase()) ||
-      (p?.descripcion ?? '').toLowerCase().includes(busqueda.toLowerCase())
+    .filter(p => (p?.categoria ?? "plato_principal") === categoriaActiva)
+    .filter(
+      p =>
+        busqueda === "" ||
+        (p?.nombre ?? "").toLowerCase().includes(busqueda.toLowerCase()) ||
+        (p?.descripcion ?? "").toLowerCase().includes(busqueda.toLowerCase())
     );
-  const subtotal = (Array.isArray(carrito) ? carrito : []).reduce((s, i) => s + (Number(i?.producto?.precio) || 0) * (Number(i?.cantidad) || 0), 0);
+  const subtotal = (Array.isArray(carrito) ? carrito : []).reduce(
+    (s, i) => s + (Number(i?.producto?.precio) || 0) * (Number(i?.cantidad) || 0),
+    0
+  );
   const iva = subtotal * IVA_RATE;
   const total = subtotal + iva;
 
   // ── Manejo del carrito ──
   const agregarAlCarrito = (producto: Producto) => {
     if (!producto.disponible) return;
-    setCarrito((prev) => {
-      const existe = prev.find((i) => i.producto.id_producto === producto.id_producto);
+    setCarrito(prev => {
+      const existe = prev.find(i => i.producto.id_producto === producto.id_producto);
       if (existe)
-        return prev.map((i) =>
+        return prev.map(i =>
           i.producto.id_producto === producto.id_producto
             ? { ...i, cantidad: i.cantidad + 1 }
             : i
         );
-      return [...prev, { producto, cantidad: 1, notas: '' }];
+      return [...prev, { producto, cantidad: 1, notas: "" }];
     });
   };
 
   const cambiarCantidad = (id: number, delta: number) =>
-    setCarrito((prev) =>
+    setCarrito(prev =>
       prev
-        .map((i) =>
+        .map(i =>
           i.producto.id_producto === id ? { ...i, cantidad: i.cantidad + delta } : i
         )
-        .filter((i) => i.cantidad > 0)
+        .filter(i => i.cantidad > 0)
     );
 
   const actualizarNotas = (id: number, notas: string) =>
-    setCarrito((prev) =>
-      prev.map((i) => (i.producto.id_producto === id ? { ...i, notas } : i))
+    setCarrito(prev =>
+      prev.map(i => (i.producto.id_producto === id ? { ...i, notas } : i))
     );
 
   const eliminarItem = (id: number) =>
-    setCarrito((prev) => prev.filter((i) => i.producto.id_producto !== id));
+    setCarrito(prev => prev.filter(i => i.producto.id_producto !== id));
 
   // ── Procesar pedido ──
   const procesarPedido = async () => {
     setErrorEnvio(null);
-    if (carrito.length === 0) { setErrorEnvio('El carrito está vacío.'); return; }
-    if (!cliente.nombre.trim()) { setErrorEnvio('El nombre del cliente es requerido.'); return; }
-    if (orderType === 'mesa' && !mesa) { setErrorEnvio('Ingrese el número de mesa.'); return; }
-    if (orderType === 'delivery' && !direccion.trim()) { setErrorEnvio('Ingrese la dirección de envío.'); return; }
+    if (carrito.length === 0) {
+      setErrorEnvio("El carrito está vacío.");
+      return;
+    }
+    if (!cliente.nombre.trim()) {
+      setErrorEnvio("El nombre del cliente es requerido.");
+      return;
+    }
+    if (orderType === "mesa" && !mesa) {
+      setErrorEnvio("Ingrese el número de mesa.");
+      return;
+    }
+    if (orderType === "delivery" && !direccion.trim()) {
+      setErrorEnvio("Ingrese la dirección de envío.");
+      return;
+    }
+
+    // Abrir la pestaña ANTES del await, mientras seguimos dentro
+    // del gesto del usuario (click), para evitar el bloqueo de pop-ups.
+    const waWindow = window.open("about:blank", "_blank");
 
     setEnviando(true);
     try {
@@ -194,44 +224,63 @@ export default function PosView() {
         cliente_cedula: cliente.cedula.trim() || undefined,
         cliente_telefono: cliente.telefono.trim() || undefined,
         tipo: orderType,
-        mesa: orderType === 'mesa' ? Number(mesa) : undefined,
-        direccion: orderType === 'delivery' ? direccion.trim() : undefined,
-        items: carrito.map((i) => ({
+        mesa: orderType === "mesa" ? Number(mesa) : undefined,
+        direccion: orderType === "delivery" ? direccion.trim() : undefined,
+        items: carrito.map(i => ({
           id_producto: i.producto.id_producto,
           nombre: i.producto.nombre,
           cantidad: i.cantidad,
           precio_unitario: i.producto.precio,
-          notas: i.notas.trim() || undefined,
+          notas: i.notas.trim() || undefined
         })),
         subtotal,
         iva,
-        total,
+        total
       });
 
-      // Generar y abrir enlace de WhatsApp
+      // Generar enlace de WhatsApp y redirigir la pestaña ya abierta
       const mensaje = generarMensajeWA(
-        ticketActual, cliente, carrito, orderType, mesa, direccion,
-        subtotal, iva, total
+        ticketActual,
+        cliente,
+        carrito,
+        orderType,
+        mesa,
+        direccion,
+        subtotal,
+        iva,
+        total
       );
-      window.open(`https://wa.me/${WA_NUMERO}?text=${encodeURIComponent(mensaje)}`, '_blank');
+      const waUrl = `https://wa.me/${WA_NUMERO}?text=${encodeURIComponent(mensaje)}`;
+
+      if (waWindow) {
+        waWindow.location.href = waUrl;
+      } else {
+        // El navegador bloqueó incluso la pestaña en blanco (poco común);
+        // como respaldo, navegamos en la misma pestaña.
+
+        // eslint-disable-next-line react-hooks/immutability
+        window.location.href = waUrl;
+      }
 
       // Toast de éxito
       showToast(
-        'success',
+        "success",
         `✓ Pedido #ORD-${ticketActual} registrado`,
         `Cliente: ${cliente.nombre.toUpperCase()} — Total: $${total.toFixed(2)}`
       );
 
       // Limpiar estado
       setCarrito([]);
-      setCliente({ nombre: '', cedula: '', telefono: '' });
-      setMesa('');
-      setDireccion('');
-      setBusqueda('');
+      setCliente({ nombre: "", cedula: "", telefono: "" });
+      setMesa("");
+      setDireccion("");
+      setBusqueda("");
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : 'Error al procesar el pedido.';
+      // Si algo falla, cerramos la pestaña en blanco que abrimos preventivamente
+      waWindow?.close();
+      const msg = e instanceof Error ? e.message : "Error al procesar el pedido.";
       setErrorEnvio(msg);
-      showToast('error', 'Error al registrar el pedido', msg);
+      showToast("error", "Error al registrar el pedido", msg);
     } finally {
       setEnviando(false);
     }
@@ -241,25 +290,24 @@ export default function PosView() {
 
   return (
     <div className="flex-1 flex flex-col lg:flex-row bg-background p-4 lg:p-6 gap-4 lg:gap-6 h-full min-h-[calc(100vh-64px)]">
-      
       {/* ── Selector de pestaña para móviles ── */}
       <div className="flex lg:hidden bg-surface-container p-1 rounded-xl border border-outline-variant shrink-0 gap-1">
         <button
-          onClick={() => setActiveMobileTab('catalog')}
+          onClick={() => setActiveMobileTab("catalog")}
           className={`flex-1 py-2.5 text-xs font-bold uppercase rounded-lg transition-all flex items-center justify-center gap-2 ${
-            activeMobileTab === 'catalog'
-              ? 'bg-primary text-on-primary shadow-sm'
-              : 'text-on-surface hover:bg-surface-container-high'
+            activeMobileTab === "catalog"
+              ? "bg-primary text-on-primary shadow-sm"
+              : "text-on-surface hover:bg-surface-container-high"
           }`}
         >
           🍔 Catálogo
         </button>
         <button
-          onClick={() => setActiveMobileTab('cart')}
+          onClick={() => setActiveMobileTab("cart")}
           className={`flex-1 py-2.5 text-xs font-bold uppercase rounded-lg transition-all flex items-center justify-center gap-2 relative ${
-            activeMobileTab === 'cart'
-              ? 'bg-primary text-on-primary shadow-sm'
-              : 'text-on-surface hover:bg-surface-container-high'
+            activeMobileTab === "cart"
+              ? "bg-primary text-on-primary shadow-sm"
+              : "text-on-surface hover:bg-surface-container-high"
           }`}
         >
           🛒 Carrito ({carrito.reduce((acc, c) => acc + c.cantidad, 0)})
@@ -272,9 +320,11 @@ export default function PosView() {
       </div>
 
       {/* ── Catálogo (izquierda) ── */}
-      <section className={`flex-1 flex flex-col bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm ${
-        activeMobileTab === 'catalog' ? 'flex' : 'hidden lg:flex'
-      }`}>
+      <section
+        className={`flex-1 flex flex-col bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm ${
+          activeMobileTab === "catalog" ? "flex" : "hidden lg:flex"
+        }`}
+      >
         {/* Tabs de categorías */}
         <div className="flex border-b border-outline-variant bg-surface-container-highest overflow-x-auto shrink-0">
           {loadingProductos ? (
@@ -282,14 +332,14 @@ export default function PosView() {
               <Loader2 size={18} className="animate-spin" /> Cargando catálogo...
             </div>
           ) : (
-            categorias.map((cat) => (
+            categorias.map(cat => (
               <button
                 key={cat}
                 onClick={() => setCategoriaActiva(cat)}
                 className={`flex-shrink-0 px-6 py-4 text-sm font-bold transition-colors border-b-4 ${
                   categoriaActiva === cat
-                    ? 'text-primary border-secondary-container bg-surface'
-                    : 'text-on-surface-variant border-transparent hover:bg-surface-variant'
+                    ? "text-primary border-secondary-container bg-surface"
+                    : "text-on-surface-variant border-transparent hover:bg-surface-variant"
                 }`}
               >
                 {formatCategoriaLabel(cat)}
@@ -300,17 +350,20 @@ export default function PosView() {
         {/* Barra de búsqueda */}
         <div className="px-4 py-2.5 border-b border-outline-variant bg-surface-container-low shrink-0">
           <div className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-outline" />
+            <Search
+              size={15}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-outline"
+            />
             <input
               type="text"
               value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
+              onChange={e => setBusqueda(e.target.value)}
               placeholder="Buscar producto..."
               className="pl-9 pr-4 h-9 w-full bg-surface border border-outline-variant rounded-lg focus:border-secondary-container focus:ring-1 focus:ring-secondary-container/30 outline-none text-sm text-on-surface placeholder:text-outline transition-colors"
             />
             {busqueda && (
               <button
-                onClick={() => setBusqueda('')}
+                onClick={() => setBusqueda("")}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-outline hover:text-on-surface transition-colors"
               >
                 ✕
@@ -335,16 +388,16 @@ export default function PosView() {
 
           {!errorProductos && productosFiltrados.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-              {productosFiltrados.map((prod) => (
+              {productosFiltrados.map(prod => (
                 <button
                   key={prod.id_producto}
                   onClick={() => {
                     agregarAlCarrito(prod);
-                    showToast('success', `Añadido: ${prod.nombre}`);
+                    showToast("success", `Añadido: ${prod.nombre}`);
                   }}
                   disabled={!prod.disponible}
                   className={`bg-surface border border-outline-variant rounded-xl p-4 flex flex-col justify-between items-start text-left hover:shadow-md transition-all active:scale-[0.98] ${
-                    !prod.disponible ? 'opacity-50 cursor-not-allowed' : ''
+                    !prod.disponible ? "opacity-50 cursor-not-allowed" : ""
                   }`}
                 >
                   <div className="w-full">
@@ -362,8 +415,10 @@ export default function PosView() {
                     <span className="font-mono text-xl font-black text-secondary-container">
                       ${prod.precio.toFixed(2)}
                     </span>
-                    <span className={`text-xs font-bold ${prod.disponible ? 'text-emerald-600' : 'text-error'}`}>
-                      {prod.disponible ? 'Disponible' : 'Agotado'}
+                    <span
+                      className={`text-xs font-bold ${prod.disponible ? "text-emerald-600" : "text-error"}`}
+                    >
+                      {prod.disponible ? "Disponible" : "Agotado"}
                     </span>
                   </div>
                 </button>
@@ -374,20 +429,23 @@ export default function PosView() {
       </section>
 
       {/* ── Carrito y Cliente (derecha) ── */}
-      <aside className={`w-full lg:w-[420px] flex flex-col bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm shrink-0 ${
-        activeMobileTab === 'cart' ? 'flex' : 'hidden lg:flex'
-      }`}>
-        
+      <aside
+        className={`w-full lg:w-[420px] flex flex-col bg-surface-container border border-outline-variant rounded-xl overflow-hidden shadow-sm shrink-0 ${
+          activeMobileTab === "cart" ? "flex" : "hidden lg:flex"
+        }`}
+      >
         {/* Info del Cliente */}
         <div className="p-4 border-b border-outline-variant bg-surface shrink-0">
-          <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest block mb-2">Datos del Cliente</label>
+          <label className="text-xs font-bold text-on-surface-variant uppercase tracking-widest block mb-2">
+            Datos del Cliente
+          </label>
           <div className="space-y-3">
             <div className="flex gap-2">
               <div className="flex-1">
                 <input
                   type="text"
                   value={cliente.cedula}
-                  onChange={(e) => setCliente((c) => ({ ...c, cedula: e.target.value }))}
+                  onChange={e => setCliente(c => ({ ...c, cedula: e.target.value }))}
                   placeholder="Cédula/RIF"
                   className="industrial-input font-mono uppercase"
                 />
@@ -396,7 +454,7 @@ export default function PosView() {
                 <input
                   type="text"
                   value={cliente.telefono}
-                  onChange={(e) => setCliente((c) => ({ ...c, telefono: e.target.value }))}
+                  onChange={e => setCliente(c => ({ ...c, telefono: e.target.value }))}
                   placeholder="Teléfono"
                   className="industrial-input font-mono"
                 />
@@ -406,7 +464,7 @@ export default function PosView() {
               <input
                 type="text"
                 value={cliente.nombre}
-                onChange={(e) => setCliente((c) => ({ ...c, nombre: e.target.value }))}
+                onChange={e => setCliente(c => ({ ...c, nombre: e.target.value }))}
                 placeholder="EJ. JUAN PEREZ"
                 className="industrial-input uppercase"
               />
@@ -416,30 +474,30 @@ export default function PosView() {
           {/* Selector de tipo de pedido */}
           <div className="mt-4">
             <div className="flex gap-2 bg-surface-dim p-1 rounded-lg">
-              {(['mesa', 'pickup', 'delivery'] as const).map((tipo) => (
+              {(["mesa", "pickup", "delivery"] as const).map(tipo => (
                 <button
                   key={tipo}
                   onClick={() => setOrderType(tipo)}
                   className={`flex-1 h-10 text-xs font-bold uppercase rounded transition-all flex items-center justify-center gap-1 ${
                     orderType === tipo
-                      ? 'bg-primary text-on-primary shadow-sm'
-                      : 'bg-transparent text-on-surface hover:bg-surface'
+                      ? "bg-primary text-on-primary shadow-sm"
+                      : "bg-transparent text-on-surface hover:bg-surface"
                   }`}
                 >
-                  {tipo === 'mesa' ? 'Mesa' : tipo === 'pickup' ? 'Llevar' : 'Delivery'}
+                  {tipo === "mesa" ? "Mesa" : tipo === "pickup" ? "Llevar" : "Delivery"}
                 </button>
               ))}
             </div>
 
             {/* Campos dinámicos por tipo */}
             <div className="mt-3 min-h-[52px]">
-              {orderType === 'mesa' && (
+              {orderType === "mesa" && (
                 <div className="flex gap-3">
                   <div className="w-20">
                     <input
                       type="number"
                       value={mesa}
-                      onChange={(e) => setMesa(e.target.value)}
+                      onChange={e => setMesa(e.target.value)}
                       placeholder="Mesa"
                       className="industrial-input text-center font-bold"
                       min={1}
@@ -452,19 +510,19 @@ export default function PosView() {
                 </div>
               )}
 
-              {orderType === 'pickup' && (
+              {orderType === "pickup" && (
                 <div className="flex items-center gap-2 text-xs text-on-surface-variant font-medium py-3">
                   <Info size={14} className="shrink-0" />
                   <span>El cliente retirará el pedido por el local.</span>
                 </div>
               )}
 
-              {orderType === 'delivery' && (
+              {orderType === "delivery" && (
                 <div>
                   <input
                     type="text"
                     value={direccion}
-                    onChange={(e) => setDireccion(e.target.value)}
+                    onChange={e => setDireccion(e.target.value)}
                     placeholder="Dirección detallada de entrega"
                     className="industrial-input"
                   />
@@ -480,10 +538,12 @@ export default function PosView() {
             <div className="h-full flex flex-col items-center justify-center text-center text-on-surface-variant py-12">
               <ShoppingBag size={36} className="opacity-40 mb-2" />
               <p className="text-sm font-semibold">El carrito está vacío</p>
-              <p className="text-xs mt-1">Selecciona productos a la izquierda para agregarlos.</p>
+              <p className="text-xs mt-1">
+                Selecciona productos a la izquierda para agregarlos.
+              </p>
             </div>
           ) : (
-            carrito.map((item) => (
+            carrito.map(item => (
               <div
                 key={item.producto.id_producto}
                 className="bg-surface border border-outline-variant rounded-xl p-3 flex flex-col gap-2 relative shadow-sm hover:shadow transition-shadow"
@@ -510,7 +570,9 @@ export default function PosView() {
                   <input
                     type="text"
                     value={item.notas}
-                    onChange={(e) => actualizarNotas(item.producto.id_producto, e.target.value)}
+                    onChange={e =>
+                      actualizarNotas(item.producto.id_producto, e.target.value)
+                    }
                     placeholder="Notas especiales (ej. sin cebolla)"
                     className="w-full text-xs bg-surface-container border-b border-outline outline-none py-1 focus:border-secondary-container transition-colors placeholder:text-outline/60 text-on-surface"
                   />
@@ -556,7 +618,9 @@ export default function PosView() {
             </div>
           </div>
           <div className="flex justify-between items-end">
-            <span className="text-lg uppercase text-primary font-black">Total a Pagar</span>
+            <span className="text-lg uppercase text-primary font-black">
+              Total a Pagar
+            </span>
             <span className="font-mono text-3xl text-secondary-container leading-none font-black">
               ${total.toFixed(2)}
             </span>
@@ -567,8 +631,12 @@ export default function PosView() {
             disabled={enviando || carrito.length === 0}
             className="w-full h-12 bg-secondary-container text-on-secondary-container text-sm font-black uppercase rounded-lg flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
           >
-            {enviando ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-            {enviando ? 'Procesando...' : 'Confirmar Pedido'}
+            {enviando ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Send size={16} />
+            )}
+            {enviando ? "Procesando..." : "Confirmar Pedido"}
           </button>
 
           {carrito.length > 0 && !enviando && (

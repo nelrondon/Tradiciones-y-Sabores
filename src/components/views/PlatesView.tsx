@@ -1,38 +1,51 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { UtensilsCrossed, Plus, Trash2, Loader2, AlertTriangle, X, Save } from 'lucide-react';
-import { api, type Producto, type CategoriaPlato } from '../api';
-import { useToast } from '../components/Toast';
+import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  UtensilsCrossed,
+  Plus,
+  Trash2,
+  Loader2,
+  AlertTriangle,
+  X,
+  Save
+} from "lucide-react";
+import { api, type Producto, type CategoriaPlato } from "../../api";
+import { useToast } from "../ui/Toast";
 
 interface FormData {
-  nombre:      string;
+  nombre: string;
   descripcion: string;
-  precio:      number;
-  categoria:   CategoriaPlato;
+  precio: number;
+  categoria: CategoriaPlato;
 }
 
 const FORM_INICIAL: FormData = {
-  nombre: '',
-  descripcion: '',
+  nombre: "",
+  descripcion: "",
   precio: 0,
-  categoria: 'entrada',
+  categoria: "entrada"
 };
 
 /** Categorías válidas según la API (POST /platos) */
 const CATEGORIAS: { id: string; label: string }[] = [
-  { id: 'entrada',         label: 'Entrada' },
-  { id: 'plato_principal', label: 'Plato Principal' },
-  { id: 'postre',          label: 'Postre' },
-  { id: 'bebida',          label: 'Bebida' },
-  { id: 'acompañante',     label: 'Acompañante' },
+  { id: "entrada", label: "Entrada" },
+  { id: "plato_principal", label: "Plato Principal" },
+  { id: "postre", label: "Postre" },
+  { id: "bebida", label: "Bebida" },
+  { id: "acompañante", label: "Acompañante" }
 ];
 
 const labelCategoria = (c: string): string =>
-  CATEGORIAS.find((x) => x.id === c)?.label ?? c;
+  CATEGORIAS.find(x => x.id === c)?.label ?? c;
 
 // ── Modal ─────────────────────────────────────────────────────────────────────
 
 function ModalPlato({
-  titulo, form, setForm, onClose, onGuardar, guardando,
+  titulo,
+  form,
+  setForm,
+  onClose,
+  onGuardar,
+  guardando
 }: {
   titulo: string;
   form: FormData;
@@ -45,8 +58,8 @@ function ModalPlato({
     setForm({ ...form, [k]: v });
 
   const valido =
-    form.nombre.trim() !== '' &&
-    form.descripcion.trim() !== '' &&
+    form.nombre.trim() !== "" &&
+    form.descripcion.trim() !== "" &&
     Number(form.precio) > 0;
 
   return (
@@ -54,8 +67,13 @@ function ModalPlato({
       <div className="bg-surface w-full max-w-md rounded-xl border border-outline-variant shadow-2xl fade-in-up">
         {/* Header */}
         <div className="flex items-center justify-between p-5 border-b border-outline-variant">
-          <h3 className="text-base font-black text-primary uppercase tracking-wide">{titulo}</h3>
-          <button onClick={onClose} className="text-on-surface-variant hover:text-error transition-colors">
+          <h3 className="text-base font-black text-primary uppercase tracking-wide">
+            {titulo}
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-on-surface-variant hover:text-error transition-colors"
+          >
             <X size={20} />
           </button>
         </div>
@@ -68,7 +86,7 @@ function ModalPlato({
             </label>
             <input
               value={form.nombre}
-              onChange={(e) => set('nombre', e.target.value)}
+              onChange={e => set("nombre", e.target.value)}
               className="industrial-input"
               placeholder="Ej. Ceviche de camarón"
             />
@@ -80,7 +98,7 @@ function ModalPlato({
             </label>
             <textarea
               value={form.descripcion}
-              onChange={(e) => set('descripcion', e.target.value)}
+              onChange={e => set("descripcion", e.target.value)}
               rows={3}
               className="industrial-input resize-none"
               placeholder="Ej. Camarones frescos marinados en limón, cebolla morada y cilantro"
@@ -94,8 +112,10 @@ function ModalPlato({
               </label>
               <input
                 value={form.precio}
-                onChange={(e) => set('precio', Number(e.target.value))}
-                type="number" min="0" step="0.01"
+                onChange={e => set("precio", Number(e.target.value))}
+                type="number"
+                min="0"
+                step="0.01"
                 className="industrial-input"
               />
             </div>
@@ -105,16 +125,22 @@ function ModalPlato({
               </label>
               <select
                 value={form.categoria}
-                onChange={(e) => set('categoria', e.target.value)}
+                onChange={e => set("categoria", e.target.value)}
                 className="industrial-input"
               >
-                {CATEGORIAS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+                {CATEGORIAS.map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
 
           {Number(form.precio) <= 0 && (
-            <p className="text-xs text-on-surface-variant">El precio debe ser mayor a 0.</p>
+            <p className="text-xs text-on-surface-variant">
+              El precio debe ser mayor a 0.
+            </p>
           )}
         </div>
 
@@ -131,7 +157,11 @@ function ModalPlato({
             disabled={guardando || !valido}
             className="px-6 h-10 text-sm font-bold bg-primary text-on-primary rounded-lg flex items-center gap-2 hover:opacity-90 transition-opacity disabled:opacity-40"
           >
-            {guardando ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+            {guardando ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Save size={14} />
+            )}
             Guardar
           </button>
         </div>
@@ -151,7 +181,7 @@ export default function PlatesView() {
   const [form, setForm] = useState<FormData>(FORM_INICIAL);
   const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState<number | null>(null);
-  const [filtro, setFiltro] = useState<string>('todos');
+  const [filtro, setFiltro] = useState<string>("todos");
 
   const cargar = useCallback(async () => {
     try {
@@ -159,13 +189,16 @@ export default function PlatesView() {
       setPlatos(data);
       setError(null);
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Error cargando platos');
+      setError(e instanceof Error ? e.message : "Error cargando platos");
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { cargar(); }, [cargar]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    cargar();
+  }, [cargar]);
 
   const abrirNuevo = () => {
     setForm(FORM_INICIAL);
@@ -173,50 +206,59 @@ export default function PlatesView() {
   };
 
   const guardar = async () => {
-    if (!form.nombre.trim() || !form.descripcion.trim() || Number(form.precio) <= 0) return;
+    if (!form.nombre.trim() || !form.descripcion.trim() || Number(form.precio) <= 0)
+      return;
     setGuardando(true);
     try {
       const nuevo = await api.crearPlato({
-        nombre:      form.nombre.trim(),
+        nombre: form.nombre.trim(),
         descripcion: form.descripcion.trim(),
-        precio:      Number(form.precio),
-        categoria:   form.categoria,
+        precio: Number(form.precio),
+        categoria: form.categoria
       });
-      setPlatos((prev) => [...prev, nuevo]);
+      setPlatos(prev => [...prev, nuevo]);
       setShowModal(false);
-      showToast('success', 'Plato creado', `${nuevo.nombre} ya está en el menú.`);
+      showToast("success", "Plato creado", `${nuevo.nombre} ya está en el menú.`);
     } catch (e: unknown) {
-      showToast('error', 'No se pudo crear el plato', e instanceof Error ? e.message : undefined);
+      showToast(
+        "error",
+        "No se pudo crear el plato",
+        e instanceof Error ? e.message : undefined
+      );
     } finally {
       setGuardando(false);
     }
   };
 
   const eliminar = async (id: number, nombre: string) => {
-    if (!confirm(`¿Eliminar "${nombre}" del menú? Esta acción no se puede deshacer.`)) return;
+    if (!confirm(`¿Eliminar "${nombre}" del menú? Esta acción no se puede deshacer.`))
+      return;
     setEliminando(id);
     try {
       await api.deletePlato(id);
-      setPlatos((prev) => prev.filter((p) => (p.id_plato ?? p.id_producto) !== id));
-      showToast('success', 'Plato eliminado', `${nombre} ya no está en el menú.`);
+      setPlatos(prev => prev.filter(p => (p.id_plato ?? p.id_producto) !== id));
+      showToast("success", "Plato eliminado", `${nombre} ya no está en el menú.`);
     } catch (e: unknown) {
-      showToast('error', 'No se pudo eliminar el plato', e instanceof Error ? e.message : undefined);
+      showToast(
+        "error",
+        "No se pudo eliminar el plato",
+        e instanceof Error ? e.message : undefined
+      );
     } finally {
       setEliminando(null);
     }
   };
 
   const visibles = useMemo(
-    () => (filtro === 'todos' ? platos : platos.filter((p) => p.categoria === filtro)),
-    [platos, filtro],
+    () => (filtro === "todos" ? platos : platos.filter(p => p.categoria === filtro)),
+    [platos, filtro]
   );
 
   const conteo = (id: string) =>
-    id === 'todos' ? platos.length : platos.filter((p) => p.categoria === id).length;
+    id === "todos" ? platos.length : platos.filter(p => p.categoria === id).length;
 
   return (
     <div className="p-8 flex-1 flex flex-col gap-6 max-w-[1400px] mx-auto w-full">
-
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-6 border-b border-outline-variant">
         <div>
@@ -238,13 +280,15 @@ export default function PlatesView() {
       {error && (
         <div className="bg-error-container text-on-error-container p-4 rounded flex items-center gap-3 border border-error text-sm">
           <AlertTriangle size={18} /> {error}
-          <button onClick={cargar} className="ml-auto font-bold underline">Reintentar</button>
+          <button onClick={cargar} className="ml-auto font-bold underline">
+            Reintentar
+          </button>
         </div>
       )}
 
       {/* Filtro por categoría */}
       <div className="flex flex-wrap gap-2">
-        {[{ id: 'todos', label: 'Todos' }, ...CATEGORIAS].map((c) => {
+        {[{ id: "todos", label: "Todos" }, ...CATEGORIAS].map(c => {
           const activo = filtro === c.id;
           return (
             <button
@@ -252,8 +296,8 @@ export default function PlatesView() {
               onClick={() => setFiltro(c.id)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wide border transition-colors ${
                 activo
-                  ? 'bg-primary text-on-primary border-primary'
-                  : 'bg-surface text-on-surface-variant border-outline-variant hover:bg-surface-container-low'
+                  ? "bg-primary text-on-primary border-primary"
+                  : "bg-surface text-on-surface-variant border-outline-variant hover:bg-surface-container-low"
               }`}
             >
               {c.label} ({conteo(c.id)})
@@ -280,20 +324,21 @@ export default function PlatesView() {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="p-10 text-center text-on-surface-variant">
-                    <Loader2 size={24} className="animate-spin inline mr-2" /> Cargando platos...
+                    <Loader2 size={24} className="animate-spin inline mr-2" /> Cargando
+                    platos...
                   </td>
                 </tr>
               ) : visibles.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-10 text-center text-on-surface-variant">
                     {platos.length === 0
-                      ? 'No hay platos registrados. Agrega el primero.'
+                      ? "No hay platos registrados. Agrega el primero."
                       : `No hay platos en la categoría "${labelCategoria(filtro)}".`}
                   </td>
                 </tr>
               ) : (
                 visibles.map((plato, idx) => {
-                  const platoId = plato.id_plato ?? plato.id_producto ?? (idx + 1);
+                  const platoId = plato.id_plato ?? plato.id_producto ?? idx + 1;
                   return (
                     <tr
                       key={platoId}
@@ -330,9 +375,11 @@ export default function PlatesView() {
                             title="Eliminar plato"
                             className="text-on-surface-variant hover:text-error transition-colors p-1 disabled:opacity-50"
                           >
-                            {eliminando === platoId
-                              ? <Loader2 size={16} className="animate-spin" />
-                              : <Trash2 size={16} />}
+                            {eliminando === platoId ? (
+                              <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={16} />
+                            )}
                           </button>
                         </div>
                       </td>

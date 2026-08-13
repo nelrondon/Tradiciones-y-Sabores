@@ -68,6 +68,38 @@ body {
   background: var(--color-secondary-container);
 }
 
+/* ── Fila con scroll horizontal y barra siempre visible ─
+   Para tiras de píldoras/pestañas que no caben a lo ancho: deja claro que hay
+   más contenido a los lados en vez de esconderlo. */
+.scroll-x {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-outline) var(--color-surface-container-high);
+  /* Aire para la barra, y arriba para que `overflow-y: hidden` no recorte los
+     elementos que crecen al estar activos (scale). */
+  padding-top: 0.25rem;
+  padding-bottom: 0.5rem;
+}
+.scroll-x::-webkit-scrollbar {
+  height: 8px;
+}
+.scroll-x::-webkit-scrollbar-track {
+  background: var(--color-surface-container-high);
+  border-radius: 9999px;
+}
+.scroll-x::-webkit-scrollbar-thumb {
+  background: var(--color-outline);
+  border-radius: 9999px;
+}
+.scroll-x::-webkit-scrollbar-thumb:hover {
+  background: var(--color-secondary-container);
+}
+
 /* ── Input industrial ─────────────────────────────────── */
 .industrial-input {
   width: 100%;

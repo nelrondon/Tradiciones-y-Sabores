@@ -411,41 +411,48 @@ export default function CustomerMenuView(_props: CustomerMenuViewProps) {
       )}
 
       {/* ── BARRA DE BÚSQUEDA Y CATEGORÍAS ── */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-8 mt-8">
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface-container p-4 rounded-2xl shadow-sm border border-outline-variant/30">
-          {/* Input Búsqueda */}
-          <div className="relative w-full sm:w-80">
-            <Search className="absolute left-3.5 top-3 w-4 h-4 text-outline" />
-            <input
-              type="text"
-              placeholder="Buscar plato o ingrediente..."
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-surface border border-outline-variant/50 rounded-xl text-sm focus:outline-none focus:border-primary transition"
-            />
-          </div>
+      <main className="mt-8">
+        {/* La barra crece más allá del ancho del catálogo (72rem) hasta lo que
+            dé la pantalla, para que las categorías quepan sin scroll cuando hay
+            sitio. Si aun así no caben, `scroll-x` se encarga. */}
+        <div className="mx-auto w-fit min-w-[min(72rem,100%)] max-w-full px-4 sm:px-8">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-surface-container p-4 rounded-2xl shadow-sm border border-outline-variant/30">
+            {/* Input Búsqueda */}
+            <div className="relative w-full sm:w-80 shrink-0">
+              <Search className="absolute left-3.5 top-3 w-4 h-4 text-outline" />
+              <input
+                type="text"
+                placeholder="Buscar plato o ingrediente..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-surface border border-outline-variant/50 rounded-xl text-sm focus:outline-none focus:border-primary transition"
+              />
+            </div>
 
-          {/* Selector de Categorías (Pills) */}
-          <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0 scrollbar-none">
-            {CATEGORIAS_DISPLAY.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  selectedCategory === cat.id
-                    ? "bg-primary text-on-primary shadow-md scale-105"
-                    : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest"
-                }`}
-              >
-                <span>{cat.icon}</span>
-                <span>{cat.label}</span>
-              </button>
-            ))}
+            {/* Selector de Categorías (Pills) — barra de scroll horizontal visible.
+                `min-w-0` es lo que permite que el contenedor flex se encoja y el
+                scroll entre en juego también en escritorio. */}
+            <div className="flex items-center gap-2 w-full sm:w-auto min-w-0 scroll-x">
+              {CATEGORIAS_DISPLAY.map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setSelectedCategory(cat.id)}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    selectedCategory === cat.id
+                      ? "bg-primary text-on-primary shadow-md scale-105"
+                      : "bg-surface-container-high text-on-surface-variant hover:bg-surface-container-highest"
+                  }`}
+                >
+                  <span>{cat.icon}</span>
+                  <span>{cat.label}</span>
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         {/* ── CATÁLOGO DE PLATOS ── */}
-        <section className="mt-8">
+        <section className="max-w-6xl mx-auto px-4 sm:px-8 mt-8">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3">
               <RefreshCw className="w-8 h-8 text-primary animate-spin" />

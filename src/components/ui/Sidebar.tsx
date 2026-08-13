@@ -1,3 +1,8 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import type { Route } from "next";
 import {
   ChefHat,
   PlusCircle,
@@ -13,22 +18,30 @@ import {
 } from "lucide-react";
 
 interface SidebarProps {
-  currentView: string;
-  setView: (view: string) => void;
   isOpen: boolean;
   onClose: () => void;
 }
 
-const navItems = [
-  { id: "orders", label: "Pedidos", icon: ReceiptText },
-  { id: "kitchen", label: "Cocina", icon: Utensils },
-  { id: "plates", label: "Platos", icon: UtensilsCrossed },
-  { id: "inventory", label: "Inventario", icon: Package },
-  { id: "suppliers", label: "Proveedores", icon: Truck },
-  { id: "reports", label: "Informes", icon: BarChart2 }
+interface NavItem {
+  href: Route;
+  label: string;
+  icon: typeof ReceiptText;
+}
+
+const navItems: NavItem[] = [
+  { href: "/gestion/pedidos", label: "Pedidos", icon: ReceiptText },
+  { href: "/gestion/cocina", label: "Cocina", icon: Utensils },
+  { href: "/gestion/platos", label: "Platos", icon: UtensilsCrossed },
+  { href: "/gestion/inventario", label: "Inventario", icon: Package },
+  { href: "/gestion/proveedores", label: "Proveedores", icon: Truck },
+  { href: "/gestion/informes", label: "Informes", icon: BarChart2 }
 ];
 
-export default function Sidebar({ currentView, setView, isOpen, onClose }: SidebarProps) {
+const NUEVO_PEDIDO_HREF: Route = "/gestion/nuevo-pedido";
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const pathname = usePathname();
+
   return (
     <nav
       style={{ background: "linear-gradient(180deg, #1a110d 0%, #211510 100%)" }}
@@ -65,14 +78,15 @@ export default function Sidebar({ currentView, setView, isOpen, onClose }: Sideb
       </div>
 
       {/* ── Botón CTA ────────────────────────────────── */}
-      <button
-        onClick={() => setView("pos")}
+      <Link
+        href={NUEVO_PEDIDO_HREF}
+        onClick={onClose}
         style={{ background: "linear-gradient(135deg, #e8601a, #c44d0e)" }}
         className="text-white text-sm font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 mb-6 hover:opacity-90 active:scale-95 transition-all h-12 uppercase tracking-wide shadow-lg shadow-orange-900/30"
       >
         <PlusCircle size={18} />
         Nuevo Pedido
-      </button>
+      </Link>
 
       {/* ── Sección label ────────────────────────────── */}
       <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest px-2 mb-1.5">
@@ -81,12 +95,13 @@ export default function Sidebar({ currentView, setView, isOpen, onClose }: Sideb
 
       {/* ── Navegación ───────────────────────────────── */}
       <div className="flex flex-col gap-0.5 flex-1">
-        {navItems.map(({ id, label, icon: Icon }) => {
-          const isActive = currentView === id;
+        {navItems.map(({ href, label, icon: Icon }) => {
+          const isActive = pathname === href;
           return (
-            <button
-              key={id}
-              onClick={() => setView(id)}
+            <Link
+              key={href}
+              href={href}
+              onClick={onClose}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all duration-150 active:scale-[0.98] ${
                 isActive
                   ? "bg-white/10 text-white"
@@ -105,7 +120,7 @@ export default function Sidebar({ currentView, setView, isOpen, onClose }: Sideb
                   style={{ background: "#e8601a" }}
                 />
               )}
-            </button>
+            </Link>
           );
         })}
       </div>

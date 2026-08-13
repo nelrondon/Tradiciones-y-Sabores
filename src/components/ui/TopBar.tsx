@@ -1,24 +1,29 @@
+"use client";
+
 import { useState, useEffect } from "react";
+import { useSelectedLayoutSegment } from "next/navigation";
 import { Bell, Search, ChefHat, Menu, Monitor, Copy, Check } from "lucide-react";
 
 interface TopBarProps {
-  currentView: string;
-  setView: (view: string) => void;
   onOpenSidebar: () => void;
 }
 
 const LABELS: Record<string, string> = {
-  pos: "Punto de Venta",
-  customer: "Pantalla Cliente",
-  orders: "Pedidos",
-  kitchen: "Panel de Cocina",
-  plates: "Platos",
-  inventory: "Inventario",
-  suppliers: "Proveedores",
-  reports: "Reportes y Datos"
+  "nuevo-pedido": "Nuevo Pedido",
+  pedidos: "Pedidos",
+  cocina: "Panel de Cocina",
+  platos: "Platos",
+  inventario: "Inventario",
+  proveedores: "Proveedores",
+  informes: "Reportes y Datos"
 };
 
-export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarProps) {
+export default function TopBar({ onOpenSidebar }: TopBarProps) {
+  const segment = useSelectedLayoutSegment();
+  console.log(segment);
+
+  const currentLabel = (segment && LABELS[segment]) ?? segment ?? "";
+
   const [hora, setHora] = useState("");
   const [copied, setCopied] = useState(false);
 
@@ -39,8 +44,6 @@ export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarPr
 
   const copyCustomerLink = () => {
     const url = `${window.location.origin}/?view=menu`;
-    // navigator.clipboard solo funciona en HTTPS.
-    // Usamos el método legacy (execCommand) que funciona en HTTP y HTTPS.
     try {
       const el = document.createElement("textarea");
       el.value = url;
@@ -55,16 +58,13 @@ export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarPr
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Si aun así falla, mostrar el link en un prompt para copiarlo manualmente
       window.prompt("Copia este link para compartir con los clientes:", url);
     }
   };
 
   return (
     <header className="bg-white border-b border-outline-variant sticky top-0 z-30 flex justify-between items-center w-full px-6 h-14 shrink-0 shadow-sm">
-      {/* ── Título de la vista actual ─────────────────────── */}
       <div className="flex items-center gap-3">
-        {/* Botón menú (hamburguesa) en móvil */}
         <button
           onClick={onOpenSidebar}
           className="md:hidden text-on-surface-variant hover:text-on-surface p-1 rounded-lg hover:bg-surface-container transition-colors"
@@ -75,20 +75,17 @@ export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarPr
         <ChefHat size={18} className="text-secondary-container shrink-0" />
         <div className="hidden md:block h-4 w-px bg-outline-variant" />
         <h1 className="text-sm font-bold text-on-surface tracking-wide">
-          {LABELS[currentView] ?? currentView}
+          {currentLabel}
         </h1>
       </div>
 
-      {/* ── Reloj ────────────────────────────────────────────── */}
       {hora && (
         <span className="hidden md:block font-mono text-sm font-bold text-on-surface-variant tabular-nums">
           {hora}
         </span>
       )}
 
-      {/* ── Acciones ──────────────────────────────────────── */}
       <div className="flex items-center gap-2">
-        {/* Grupo: Pantalla Cliente + Copiar Link */}
         <div className="flex items-center gap-1 bg-amber-50 border border-amber-200 rounded-xl p-1 shadow-sm">
           <button
             onClick={() =>
@@ -118,7 +115,6 @@ export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarPr
           </button>
         </div>
 
-        {/* Búsqueda global */}
         <div className="relative hidden xl:block">
           <Search
             size={14}
@@ -131,7 +127,6 @@ export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarPr
           />
         </div>
 
-        {/* Estado del sistema */}
         <div className="hidden md:flex items-center gap-1.5 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
           <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">
@@ -139,7 +134,6 @@ export default function TopBar({ currentView, setView, onOpenSidebar }: TopBarPr
           </span>
         </div>
 
-        {/* Notificaciones */}
         <button className="w-8 h-8 flex items-center justify-center hover:bg-surface-container rounded-lg transition-colors text-on-surface-variant relative">
           <Bell size={17} />
         </button>

@@ -1,5 +1,5 @@
-import BaseManagementView from "@/components/ManagementPage";
+import { redirect } from "next/navigation";
 
-export default function ManagementPage() {
-  return <BaseManagementView />;
+export default function GestionPage() {
+  redirect("/gestion/nuevo-pedido");
 }
